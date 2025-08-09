@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>帝國餘暉：大清王朝</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      /* --- 字體導入 --- */
+      @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+TC:wght@400;700;900&family=ZCOOL+XiaoWei&family=Zhi+Mang+Xing&display=swap');
+      
+      /* --- 變數定義 (清代風格) --- */
+      :root {
+        --bg-color: #F8F4E8; /* 略帶米黃的宮廷牆色 */
+        --primary-color: #4A4676; /* 主色 - 帝王青 (青金石色) */
+        --accent-color: #E8B44A;  /* 強調色 - 帝王黃 */
+        --accent-light: #F3D9A5;  /* 強調淺色 - 淡金黃 */
+        --text-color: #333333;    /* 內文顏色 - 深灰黑 */
+        --title-font: 'Ma Shan Zheng', 'Noto Serif TC', serif;
+        --body-font: 'Noto Serif TC', serif;
+        --cursive-font: 'Zhi Mang Xing', cursive;
+        --elegant-font: 'ZCOOL+XiaoWei', serif;
+      }
+
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        font-family: var(--body-font);
+        font-size: 18px;
+        background-image: url('https://www.transparenttextures.com/patterns/paper.png'); /* 書卷紋理 */
+        overflow-x: hidden;
+      }
+      
+      /* --- 水墨卷轴效果 --- */
+      .silk-scroll-effect {
+        position: relative;
+      }
+      .silk-scroll-effect::before,
+      .silk-scroll-effect::after {
+        content: '';
+        position: absolute;
+        width: 60px;
+        height: 100%;
+        top: 0;
+        z-index: 5;
+        background: linear-gradient(90deg, rgba(248, 244, 232, 0.8), transparent);
+        pointer-events: none;
+      }
+      .silk-scroll-effect::before { left: 0; }
+      .silk-scroll-effect::after { right: 0; transform: rotate(180deg); }
+      
+      /* --- 通用區塊設定 --- */
+      .slide-section {
+        width: 100%;
+        min-height: 100vh;
+        padding: 180px 40px 80px; 
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        max-width: 1600px;
+        margin: 0 auto;
+        border-bottom: 1px solid rgba(74, 70, 118, 0.1);
+      }
+      
+      /* --- 内容承载层 --- */
+      .content-container {
+        background: rgba(248, 244, 232, 0.94);
+        border-radius: 12px;
+        padding: 40px;
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(232, 180, 74, 0.3);
+        position: relative;
+        z-index: 10;
+        width: 90%;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .content-container::before {
+        content: '';
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        border: 2px solid rgba(232, 180, 74, 0.15);
+        border-radius: 8px;
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      /* --- 標題美化 --- */
+      .section-title {
+        font-family: var(--title-font);
+        font-size: 4.5rem;
+        color: var(--primary-color);
+        margin-bottom: 50px;
+        text-align: center;
+        line-height: 1.2;
+        position: relative;
+        padding-bottom: 30px;
+        text-shadow: 3px 3px 6px rgba(0,0,0,0.1);
+        letter-spacing: 2px;
+      }
+      /* 标题装饰线 (祥雲筆觸) */
+      .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 200px;
+        height: 10px;
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="10" viewBox="0 0 200 10"><path d="M0,5 C40,2 80,8 120,5 S160,2 200,6" fill="none" stroke="%23E8B44A" stroke-width="3" stroke-linecap="round"/></svg>');
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+
+      /* --- 導覽列 --- */
+      .navbar {
+        position: fixed; top: 0; left: 0; width: 100%;
+        background-color: rgba(74, 70, 118, 0.95); /* 帝王青 */
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        z-index: 1000; padding: 15px 20px;
+        transition: all 0.4s ease;
+      }
+      .navbar.scrolled { padding: 10px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+      .nav-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px 25px; }
+      .nav-links a {
+        color: var(--bg-color); 
+        font-family: var(--elegant-font);
+        font-size: 18px; 
+        padding: 10px 20px; 
+        border-radius: 30px;
+        transition: all 0.4s ease;
+        position: relative;
+        letter-spacing: 1px;
+      }
+      .nav-links a:hover, .nav-links a.active { 
+        background: linear-gradient(135deg, var(--accent-color), #d8a536);
+        color: var(--primary-color);
+        transform: translateY(-4px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      }
+      .nav-links a::before {
+        content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        border-radius: 30px; background: linear-gradient(135deg, transparent, rgba(232, 180, 74, 0.3));
+        opacity: 0; transition: opacity 0.3s ease;
+      }
+      .nav-links a:hover::before { opacity: 1; }
+
+      /* --- 控制面板 --- */
+      .control-panel { position: fixed; top: 120px; right: 30px; display: flex; flex-direction: column; gap: 15px; z-index: 999; }
+      .control-btn {
+        width: 55px; height: 55px;
+        background: linear-gradient(135deg, var(--primary-color), #37345a);
+        color: var(--accent-color);
+        border: 2px solid var(--accent-color);
+        border-radius: 50%; display: flex; justify-content: center; align-items: center;
+        cursor: pointer; font-size: 22px; transition: all 0.4s ease;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.25);
+      }
+      .control-btn:hover {
+        background: linear-gradient(135deg, var(--accent-color), #d8a536);
+        color: var(--primary-color);
+        transform: scale(1.15) rotate(12deg);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      }
+      #to-top-btn { display: none; }
+      
+      /* --- 語音導讀按鈕 Playing 狀態 --- */
+      .tts-btn.is-playing { background-color: var(--accent-color); color: var(--primary-color); }
+      .tts-btn.is-playing:hover { background-color: #d8a536; }
+      .autoplay-active .tts-btn { display: none; }
+      
+      /* --- 語音播放時鎖定畫面樣式 --- */
+      body.tts-active .nav-links a, body.tts-active #to-top-btn {
+          pointer-events: none; opacity: 0.5; cursor: not-allowed; transition: opacity 0.3s ease;
+      }
+
+      /* --- 捲動動畫 --- */
+      .scroll-reveal { opacity: 0; transform: translateY(50px); transition: opacity 1s ease-out, transform 1s ease-out; }
+      .scroll-reveal.visible { opacity: 1; transform: translateY(0); }
+      
+      /* --- 時間軸視覺強化 --- */
+      .visual-timeline { position: relative; width: 100%; max-width: 900px; margin: 50px auto; padding: 20px 0; }
+      .visual-timeline::after {
+        content: ''; position: absolute; width: 8px; 
+        background: linear-gradient(to bottom, transparent, var(--accent-color), transparent);
+        top: 0; bottom: 0; left: 50%; margin-left: -4px; z-index: 1;
+        border-radius: 10px; box-shadow: 0 0 15px rgba(232, 180, 74, 0.5);
+      }
+      .timeline-container { padding: 10px 40px; position: relative; background-color: inherit; width: 50%; }
+      .timeline-container.left { left: 0; }
+      .timeline-container.right { left: 50%; }
+      .timeline-container::after {
+        content: ''; position: absolute; width: 35px; height: 35px; right: -17px;
+        background-color: var(--bg-color); border: 4px solid var(--primary-color);
+        top: 25px; border-radius: 50%; z-index: 2; transition: all 0.4s ease;
+        box-shadow: 0 0 0 6px rgba(232, 180, 74, 0.4);
+      }
+      .timeline-container:hover::after { transform: scale(1.4); background-color: var(--accent-color); box-shadow: 0 0 0 8px rgba(232, 180, 74, 0.6); }
+      .timeline-container.right::after { left: -17px; }
+      .timeline-content {
+        padding: 30px 40px; 
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(243, 217, 165, 0.4)); 
+        position: relative; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        border: 1px solid rgba(74, 70, 118, 0.2);
+        border-left: 10px solid var(--primary-color);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        backdrop-filter: blur(4px);
+      }
+      .timeline-content:hover { transform: translateY(-15px) rotate(1deg); box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
+      .timeline-content h3 { font-size: 26px; color: var(--primary-color); font-family: var(--title-font); margin-bottom: 15px; border-bottom: 2px solid var(--accent-light); padding-bottom: 10px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+      .timeline-content p { font-size: 18px; line-height: 1.8; font-family: var(--elegant-font); }
+
+      /* --- 互動地圖 --- */
+      .map-container-interactive { 
+        position: relative; width: 100%; max-width: 800px; border-radius: 15px;
+        overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        border: 3px solid var(--accent-light);
+        transform: perspective(1000px) rotateX(5deg) rotateY(0deg); transition: transform 0.5s ease;
+      }
+      .map-container-interactive:hover { transform: perspective(1000px) rotateX(2deg) rotateY(2deg); }
+      .hotspot {
+        position: absolute; width: 40px; height: 40px;
+        background: radial-gradient(circle, rgba(232, 180, 74, 0.9), rgba(216, 165, 54, 0.9)); 
+        border: 3px solid white; border-radius: 50%; cursor: pointer;
+        transition: all 0.4s ease; display: flex; justify-content: center; align-items: center;
+        box-shadow: 0 0 20px rgba(232, 180, 74, 0.8);
+        animation: pulse 2s infinite; z-index: 10;
+      }
+      @keyframes pulse { 
+        0% { transform: scale(1); box-shadow: 0 0 10px rgba(232, 180, 74, 0.5); } 
+        50% { transform: scale(1.2); box-shadow: 0 0 30px rgba(232, 180, 74, 1); } 
+        100% { transform: scale(1); box-shadow: 0 0 10px rgba(232, 180, 74, 0.5); } 
+      }
+      .hotspot:hover { transform: scale(1.6); background: radial-gradient(circle, var(--primary-color), #37345a); animation-play-state: paused; z-index: 20; }
+      .hotspot .fa-star { color: white; font-size: 18px; transition: transform 0.3s ease; }
+      .hotspot:hover .fa-star { transform: rotate(360deg); }
+      .info-box {
+        display: none; position: absolute; 
+        background: linear-gradient(135deg, rgba(20, 18, 30, 0.95), rgba(40, 38, 60, 0.95));
+        color: var(--accent-light); padding: 25px; border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.6); z-index: 20;
+        width: 300px; border-left: 5px solid var(--accent-color);
+        font-family: var(--elegant-font); backdrop-filter: blur(8px); animation: fadeIn 0.4s ease;
+      }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+      .info-box h3 { font-family: var(--title-font); font-size: 24px; color: var(--accent-color); margin-bottom: 15px; border-bottom: 1px solid rgba(232, 180, 74, 0.4); padding-bottom: 10px; }
+      .info-box p { font-size: 17px; line-height: 1.7; }
+
+      /* --- 卡片通用樣式 --- */
+      .styled-card {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(243, 217, 165, 0.3));
+        border: 1px solid rgba(232, 180, 74, 0.3);
+        border-radius: 18px; padding: 30px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+        transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        height: 100%; display: flex; flex-direction: column;
+        overflow: hidden; position: relative; backdrop-filter: blur(4px);
+      }
+      .styled-card::before {
+        content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px;
+        background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+      }
+      .styled-card:hover { transform: translateY(-20px) rotate(2deg); box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+      
+      /* --- 圖片容器 --- */
+      .image-container-styled {
+        border-radius: 15px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        border: 6px solid var(--accent-color);
+        display: flex; justify-content: center; align-items: center;
+        width: 100%; transition: all 0.5s ease;
+        transform: perspective(1000px) rotateX(5deg);
+      }
+      .image-container-styled:hover { box-shadow: 0 20px 50px rgba(0,0,0,0.4); transform: perspective(1000px) rotateX(2deg); }
+      .image-container-styled img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+      .image-container-styled:hover img { transform: scale(1.1); }
+
+      /* --- 首頁特殊樣式 (MODIFIED) --- */
+      #title {
+        overflow: hidden; /* Ensures video stays contained */
+        color: var(--accent-color);
+      }
+      /* Overlay for the background video */
+      #title::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: rgba(0, 0, 0, 0.45);
+        z-index: 1; /* Sits between video (z-index 0) and content */
+      }
+      #title .border-pattern {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        border: 40px solid transparent;
+        border-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><path d="M0,0 L80,0 L80,80 L0,80 Z" fill="none" stroke="%23E8B44A" stroke-width="3"/><path d="M20,20 L60,20 L60,60 L20,60 Z" fill="none" stroke="%23E8B44A" stroke-width="2" stroke-dasharray="8,8"/></svg>') 40 stretch;
+        pointer-events: none; z-index: 10;
+      }
+      #title h1 {
+        font-family: 'Ma Shan Zheng', cursive; font-size: 8rem; font-weight: 700;
+        margin-bottom: 25px; color: #FAF0D7; /* 亮米色 */
+        text-shadow: 5px 5px 15px rgba(0, 0, 0, 0.9);
+        letter-spacing: 3px; line-height: 1.1;
+      }
+      #title h2 {
+        font-family: var(--elegant-font); font-size: 3rem; font-weight: 400;
+        margin-bottom: 50px; color: var(--accent-color);
+        letter-spacing: 3px; text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+      }
+      .copyright-notice {
+        position: absolute; bottom: 25px; left: 30px;
+        transform: none; font-size: 16px; color: var(--accent-color);
+        background-color: rgba(0, 0, 0, 0.5); padding: 10px 22px; 
+        border-radius: 12px; z-index: 30;
+        font-family: var(--elegant-font); letter-spacing: 1px;
+      }
+      .title-content { position: relative; z-index: 20; text-align: center; padding: 60px; max-width: 1400px; margin: 0 auto; }
+      .title-subtitle {
+        font-size: 2rem; margin-top: 70px; font-family: var(--cursive-font);
+        letter-spacing: 2px; text-shadow: 3px 3px 8px rgba(0,0,0,0.8);
+        line-height: 1.7; max-width: 900px; margin: 70px auto 0;
+      }
+
+      /* --- Section Backgrounds & Readability --- */
+      .slide-section { background-size: cover; background-position: center center; background-attachment: fixed; }
+      #overview { background: linear-gradient(rgba(20, 18, 30, 0.28), rgba(20, 18, 30, 0.28)), url('https://www.gcs.gov.mo/news/p/P21BIkUMoZ/l') center center/cover; }
+      #timeline { background: linear-gradient(rgba(20, 18, 30, 0.28), rgba(20, 18, 30, 0.28)), url('http://5b0988e595225.cdn.sohucs.com/images/20190824/72067eee928a46b1a8a9622fec952c31.jpeg') center center/cover; }
+      #territory { background: linear-gradient(rgba(20, 18, 30, 0.3), rgba(20, 18, 30, 0.3)), url('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Qing_Dynasty_in_1820.svg/1920px-Qing_Dynasty_in_1820.svg.png') center center/cover; }
+      #emperors { background: linear-gradient(rgba(20, 18, 30, 0.25), rgba(20, 18, 30, 0.25)), url('https://gw.alicdn.com/imgextra/i2/3173527445/O1CN01tMqyeR24rrf1wRpcT_!!3173527445.jpg_Q75.jpg_.webp') center center/cover; }
+      #government { background: linear-gradient(rgba(20, 18, 30, 0.25), rgba(20, 18, 30, 0.25)), url('https://www.qingxiling.com/keditor/attached/image/20180918/20180918154004_57649.jpg') center center/cover; }
+      #culture { background: linear-gradient(rgba(20, 18, 30, 0.25), rgba(20, 18, 30, 0.25)), url('http://image.digitalarchives.tw/ImageCache/00/61/ae/49.jpg') center center/cover; }
+      #exchange { background: linear-gradient(rgba(20, 18, 30, 0.25), rgba(20, 18, 30, 0.25)), url('https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Capture_of_the_Peiho_Forts.jpg/640px-Capture_of_the_Peiho_Forts.jpg') center center/cover; }
+      #scholars { background: linear-gradient(rgba(20, 18, 30, 0.2), rgba(20, 18, 30, 0.2)), url('https://digitalarchive.npm.gov.tw/Image/GetImage?imageId=621566&randomCode=944346117') center center/cover; }
+      #decline { background: linear-gradient(rgba(20, 18, 30, 0.2), rgba(20, 18, 30, 0.2)), url('https://k-static.appmobile.cn/uploads/ext/a/t011ce86339f0e44cc2.jpg') center center/cover; }
+      #legacy { background: linear-gradient(rgba(20, 18, 30, 0.2), rgba(20, 18, 30, 0.2)), url('https://image.peoplemedia.tw/collection/1486833755.jpg') center center/cover; }
+      #qing-video { background: linear-gradient(rgba(20, 18, 30, 0.2), rgba(20, 18, 30, 0.2)), url('https://www.npmshops.com/shop/shop/PrdInfo/2010010704629_x.jpg') center center/cover; }
+      
+      /* --- 保護卡片內的文字顏色 --- */
+      .timeline-content, .styled-card, .info-card, .quote-block { text-shadow: none; }
+      .timeline-content *, .styled-card *, .info-card *, .quote-block * { text-shadow: none; }
+      .timeline-content, .styled-card { color: var(--text-color); }
+      .timeline-content h3, .styled-card .text-blue-800, .info-card .text-blue-800 { color: var(--primary-color); }
+      
+      /* --- 針對特定元素的精細調整 --- */
+      .info-card {
+        background: linear-gradient(145deg, rgba(248, 244, 232, 0.95), rgba(243, 217, 165, 0.4)) !important;
+        backdrop-filter: blur(5px); color: var(--text-color); border-radius: 15px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.12); padding: 30px;
+      }
+      .info-card li { color: var(--text-color); }
+      .info-card .text-yellow-600 { color: #d8a536; } /* 調整為主題色 */
+      .info-card .text-blue-800 { color: var(--primary-color); }
+      .text-sm { color: var(--text-color); opacity: 0.85; }
+      
+      /* --- 引言區塊 --- */
+      .quote-block {
+        background: linear-gradient(135deg, rgba(20, 18, 30, 0.7), rgba(40, 38, 60, 0.7));
+        border-color: var(--accent-color); border-left: 10px solid var(--accent-color);
+        padding: 35px; border-radius: 15px; max-width: 900px; margin: 50px auto;
+        backdrop-filter: blur(5px);
+      }
+      .quote-block p { color: var(--accent-light); text-shadow: 1px 1px 3px rgba(0,0,0,0.5); }
+      
+      /* 新增元素：清代風格装饰 (祥雲/滿文) */
+      .tang-decoration {
+        position: absolute; width: 150px; height: 150px;
+        opacity: 0.15; z-index: 1; background-size: contain; background-repeat: no-repeat;
+      }
+      .decoration-1 { top: 30px; left: 30px; background-image: url('https://png.pngtree.com/png-vector/20220612/ourmid/pngtree-chinese-style-auspicious-clouds-and-dragon-patterns-png-image_4960351.png'); }
+      .decoration-2 { bottom: 30px; right: 30px; transform: rotate(180deg); background-image: url('https://png.pngtree.com/png-vector/20220612/ourmid/pngtree-chinese-style-auspicious-clouds-and-dragon-patterns-png-image_4960351.png'); }
+      .decoration-3 { top: 40%; right: 5%; width: 120px; height: 120px; background-image: url('https://png.pngtree.com/png-vector/20220612/ourmid/pngtree-chinese-style-auspicious-clouds-and-dragon-patterns-png-image_4960351.png'); opacity: 0.1; transform: rotate(25deg); }
+      .decoration-4 { bottom: 30%; left: 5%; width: 100px; height: 100px; background-image: url('https://png.pngtree.com/png-vector/20220612/ourmid/pngtree-chinese-style-auspicious-clouds-and-dragon-patterns-png-image_4960351.png'); opacity: 0.1; transform: rotate(-15deg); }
+      
+      /* 士人卡片特殊样式 */
+      .scholar-card {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(243, 217, 165, 0.3));
+        border-radius: 20px; overflow: hidden;
+        transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.15); position: relative; height: 100%;
+      }
+      .scholar-card:hover { transform: translateY(-15px) rotate(1.5deg); box-shadow: 0 20px 45px rgba(0,0,0,0.25); }
+      .scholar-img { height: 280px; overflow: hidden; position: relative; }
+      .scholar-img img { width: 100%; height: 100%; object-fit: cover; object-position: top; transition: transform 0.6s ease; }
+      .scholar-card:hover .scholar-img img { transform: scale(1.15); }
+      .scholar-content { padding: 25px; }
+      .scholar-name { font-family: var(--title-font); font-size: 28px; color: var(--primary-color); margin-bottom: 10px; border-bottom: 2px solid var(--accent-light); padding-bottom: 8px; }
+      .scholar-desc { font-family: var(--elegant-font); font-size: 17px; line-height: 1.8; color: var(--text-color); }
+      
+      /* 响应式调整 */
+      @media (max-width: 1024px) { .section-title { font-size: 3.8rem; } .nav-links { gap: 8px 20px; } .nav-links a { padding: 8px 16px; font-size: 17px; } }
+      @media (max-width: 768px) {
+        .section-title { font-size: 3.2rem; padding: 0 20px 20px; }
+        .slide-section { padding: 180px 25px 60px; }
+        #title h1 { font-size: 6rem; } #title h2 { font-size: 2.5rem; } .title-subtitle { font-size: 1.8rem; }
+        .content-container { padding: 30px; }
+        .timeline-container { width: 100%; padding: 10px 30px 10px 60px; left: 0 !important; }
+        .timeline-container::after { left: 25px !important; right: auto !important; }
+        .visual-timeline::after { left: 30px; }
+        .control-panel { top: auto; bottom: 20px; right: 15px; }
+        .control-btn { width: 48px; height: 48px; font-size: 20px; }
+      }
+      @media (max-width: 480px) {
+        .section-title { font-size: 2.8rem; }
+        #title h1 { font-size: 4.5rem; } #title h2 { font-size: 2rem; }
+        .title-subtitle { font-size: 1.5rem; margin-top: 50px; }
+        .copyright-notice { font-size: 14px; left: 15px; bottom: 15px; }
+        .nav-links a { padding: 7px 14px; font-size: 16px; }
+        .content-container { padding: 20px; }
+      }
+    </style>
+</head>
+<body class="silk-scroll-effect">
+
+    <!-- 背景音樂播放器 (移除 src 和 loop) -->
+    <audio id="bg-music"></audio>
+
+    <!-- 導覽列 -->
+    <nav class="navbar">
+      <div class="nav-links">
+        <a href="#title" data-lang-key="nav_home">首頁</a>
+        <a href="#overview" data-lang-key="nav_overview">王朝總覽</a>
+        <a href="#timeline" data-lang-key="nav_timeline">大事年表</a>
+        <a href="#territory" data-lang-key="nav_territory">疆域與地理</a>
+        <a href="#emperors" data-lang-key="nav_emperors">重要皇帝</a>
+        <a href="#government" data-lang-key="nav_government">政府與制度</a>
+        <a href="#culture" data-lang-key="nav_culture">文化藝術</a>
+        <a href="#exchange" data-lang-key="nav_exchange">國際交流</a>
+        <a href="#scholars" data-lang-key="nav_scholars">士人與科技</a>
+        <a href="#decline" data-lang-key="nav_decline">晚清變局</a>
+        <a href="#legacy" data-lang-key="nav_legacy">歷史遺產</a>
+        <a href="#qing-video" data-lang-key="nav_qing_video">清代畫卷影音專區</a>
+      </div>
+    </nav>
+
+    <!-- 控制面板 -->
+    <div class="control-panel">
+      <button id="lang-toggle" class="control-btn" title="切換語言 / Language"><i class="fas fa-language"></i></button>
+      <button id="autoplay-toggle" class="control-btn" title="自動播放 / Autoplay"><i class="fas fa-play"></i></button>
+      <button id="fullscreen-toggle" class="control-btn" title="全螢幕 / Fullscreen"><i class="fas fa-expand"></i></button>
+      <button id="music-toggle" class="control-btn" title="背景音樂 / Music"><i class="fas fa-volume-mute"></i></button>
+      <button id="to-top-btn" class="control-btn" title="回到頂部 / Back to Top"><i class="fas fa-arrow-up"></i></button>
+    </div>
+
+    <!-- 主要內容區域 -->
+    <main>
+
+      <!-- 區塊 1: 標題頁 (MODIFIED) -->
+      <section id="title" class="slide-section">
+        <video autoplay loop muted playsinline style="position: absolute; top: 50%; left: 50%; min-width: 100%; min-height: 100%; width: auto; height: auto; object-fit: cover; transform: translate(-50%, -50%); z-index: 0;">
+            <source src="https://ping763573.github.io/history/05.mp4" type="video/mp4">
+        </video>
+        <div class="border-pattern"></div>
+        <div class="tang-decoration decoration-1"></div>
+        <div class="tang-decoration decoration-2"></div>
+        <div class="tang-decoration decoration-3"></div>
+        <div class="tang-decoration decoration-4"></div>
+        <div class="title-content">
+          <h1 data-lang-key="title_main">帝國餘暉<br>The Qing Dynasty</h1>
+          <div style="font-size: 2.5rem; font-weight: 600; color: var(--accent-color); margin-top: 15px; letter-spacing: 3px; font-family: var(--elegant-font);" data-lang-key="title_dates">西元 1644－1912 年</div>
+          <h2 data-lang-key="title_subtitle">從清兵入關到辛亥革命</h2>
+          <p class="title-subtitle" data-lang-key="title_presenter">一個王朝的榮耀、掙扎與落幕<br>大學歷史課程</p>
+        </div>
+        <p class="copyright-notice" data-lang-key="copyright">展示照片與配樂其版權屬原創所有；純分享勿商用。</p>
+      </section>
+
+      <!-- 區塊 2: 王朝總覽 -->
+      <section id="overview" class="slide-section has-bg-image">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="overview_title">清朝概覽：滿漢融合的帝國</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <div class="flex flex-col lg:flex-row items-center gap-12 mt-8">
+              <div class="lg:w-3/5 scroll-reveal">
+                <p class="text-xl leading-loose mb-6" data-lang-key="overview_p1">清朝（西元1636年/1644年–1912年）是中國歷史上最後一個大一統的封建王朝，由滿族建立。它不僅繼承了明代的龐大疆域，更將其拓展至極盛，奠定了現代中國的版圖基礎。</p>
+                <p class="text-xl leading-loose" data-lang-key="overview_p2">從「康雍乾盛世」的輝煌，到晚清面對西方列強衝擊的掙扎與變革，清朝二百多年的歷史，是傳統中華帝國走向終結，並被迫邁向現代化的關鍵轉折點。</p>
+                <div class="info-card border-l-4 border-blue-800 p-6 mt-8 rounded-lg">
+                  <h3 class="font-bold text-2xl text-blue-800 mb-4" data-lang-key="overview_key_title">核心特徵</h3>
+                  <ul class="list-none p-0 space-y-3">
+                    <li class="text-lg flex items-start"><i class="fas fa-chess-king text-yellow-600 mr-3 mt-1"></i><span data-lang-key="overview_key_1">滿族入主中原，改變歷代漢人政權格局</span></li>
+                    <li class="text-lg flex items-start"><i class="fas fa-book-dead text-yellow-600 mr-3 mt-1"></i><span data-lang-key="overview_key_2">強化文字獄與思想管制</span></li>
+                    <li class="text-lg flex items-start"><i class="fas fa-sun text-yellow-600 mr-3 mt-1"></i><span data-lang-key="overview_key_3">開創康雍乾盛世，國力達於頂峰</span></li>
+                    <li class="text-lg flex items-start"><i class="fas fa-door-closed text-yellow-600 mr-3 mt-1"></i><span data-lang-key="overview_key_4">實施閉關政策與「天朝上國」心態</span></li>
+                    <li class="text-lg flex items-start"><i class="fas fa-fire-alt text-yellow-600 mr-3 mt-1"></i><span data-lang-key="overview_key_5">民變與列強壓力導致晚清動盪</span></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="lg:w-2/5 scroll-reveal" style="transition-delay: 0.2s;">
+                <div class="image-container-styled h-full">
+                  <img src="https://13269944.s21i.faiusr.com/4/ABUIABAEGAAgm_DhyAUozuOK1QEwqgQ4nwM.png" alt="清代皇帝出巡圖" onerror="this.onerror=null;this.src='https://placehold.co/600x800/4A4676/F8F4E8?text=清帝出巡'">
+                </div>
+                <p class="text-sm italic mt-3 text-right" data-lang-key="overview_img_caption">清代宮廷畫作，展現了帝國的威儀與複雜的宮廷文化。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 3: 大事年表 -->
+      <section id="timeline" class="slide-section has-bg-image">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="timeline_title">清朝興衰年表</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <div class="visual-timeline">
+              <!-- Timeline items -->
+              <div class="timeline-container left scroll-reveal"><div class="timeline-content"><h3 data-lang-key="timeline_1_title">1644年: 順治入關</h3><p data-lang-key="timeline_1_desc">清軍在吳三桂引導下進入山海關，擊敗李自成，定都北京，清朝對全國的統治正式開始。</p></div></div>
+              <div class="timeline-container right scroll-reveal"><div class="timeline-content"><h3 data-lang-key="timeline_2_title">1683年: 統一台灣</h3><p data-lang-key="timeline_2_desc">康熙帝派遣施琅率軍攻取台灣，鄭克塽投降，明鄭時期結束，台灣正式納入清朝版圖。</p></div></div>
+              <div class="timeline-container left scroll-reveal"><div class="timeline-content"><h3 data-lang-key="timeline_3_title">1793年: 馬戛爾尼使團</h3><p data-lang-key="timeline_3_desc">英國馬戛爾尼使團來華，尋求通商，但因禮儀之爭與清廷的閉關心態而失敗，預示了中西衝突的到來。</p></div></div>
+              <div class="timeline-container right scroll-reveal"><div class="timeline-content"><h3 data-lang-key="timeline_4_title">1840年: 鴉片戰爭</h3><p data-lang-key="timeline_4_desc">第一次鴉片戰爭爆發，清軍戰敗，簽訂《南京條約》，開啟了中國近代史的「百年國恥」。</p></div></div>
+              <div class="timeline-container left scroll-reveal"><div class="timeline-content"><h3 data-lang-key="timeline_5_title">1895年: 甲午戰敗</h3><p data-lang-key="timeline_5_desc">甲午戰爭中，清朝北洋水師全軍覆沒，戰敗後簽訂《馬關條約》，割讓台灣、賠償巨款。</p></div></div>
+              <div class="timeline-container right scroll-reveal"><div class="timeline-content"><h3 data-lang-key="timeline_6_title">1911年: 辛亥革命</h3><p data-lang-key="timeline_6_desc">武昌起義引發辛亥革命，各省紛紛獨立。次年，宣統帝溥儀退位，清朝滅亡，中國兩千多年的帝制終結。</p></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 4: 疆域與地理 -->
+      <section id="territory" class="slide-section has-bg-image">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="territory_title">帝國疆域之極盛</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <div class="flex flex-col lg:flex-row items-center gap-12 mt-8">
+              <div class="lg:w-3/5 scroll-reveal">
+                <div class="map-container-interactive mx-auto image-container-styled">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/800px-Qing.PNG/330px-800px-Qing.PNG" alt="Map of Qing Dynasty" onerror="this.onerror=null;this.src='https://placehold.co/800x600/4A4676/F8F4E8?text=清朝疆域圖'">
+                  <div class="hotspot" style="top: 48%; left: 78%;" data-target="info-beijing"><i class="fas fa-star"></i></div>
+                  <div class="hotspot" style="top: 44%; left: 79%;" data-target="info-chengde"><i class="fas fa-star"></i></div>
+                  <div class="hotspot" style="top: 55%; left: 50%;" data-target="info-tibet"><i class="fas fa-star"></i></div>
+                  <div class="hotspot" style="top: 42%; left: 45%;" data-target="info-xinjiang"><i class="fas fa-star"></i></div>
+                  <div class="hotspot" style="top: 70%; left: 80%;" data-target="info-taiwan"><i class="fas fa-star"></i></div>
+                  <div id="info-beijing" class="info-box" style="top: 40%; left: 48%;"><h3 data-lang-key="map_beijing_title">北京 (京師)</h3><p data-lang-key="map_beijing_desc">清朝首都，是全國的政治與文化中心。紫禁城作為皇宮，見證了清朝二百餘年的興衰榮辱。</p></div>
+                  <div id="info-chengde" class="info-box" style="top: 34%; left: 51%;"><h3 data-lang-key="map_chengde_title">承德 (避暑山莊)</h3><p data-lang-key="map_chengde_desc">清代皇帝的夏宮，是處理民族事務、接見蒙藏王公及外國使節的重要場所，被稱為「第二個政治中心」。</p></div>
+                  <div id="info-tibet" class="info-box" style="top: 45%; left: 20%;"><h3 data-lang-key="map_tibet_title">西藏 (設駐藏大臣)</h3><p data-lang-key="map_tibet_desc">清朝在西藏設立駐藏大臣，與達賴、班禪共同治理，強化了中央對西藏的管轄。</p></div>
+                  <div id="info-xinjiang" class="info-box" style="top: 32%; left: 17%;"><h3 data-lang-key="map_xinjiang_title">新疆 (伊犁)</h3><p data-lang-key="map_xinjiang_desc">乾隆年間平定準噶爾部後，將此地命名為新疆，意為「故土新歸」。設立伊犁將軍，鞏固了西北邊防。</p></div>
+                  <div id="info-taiwan" class="info-box" style="top: 60%; left: 52%;"><h3 data-lang-key="map_taiwan_title">台灣 (設府治)</h3><p data-lang-key="map_taiwan_desc">康熙年間納入版圖後設立台灣府，隸屬福建。1885年正式建省，成為清朝最年輕的行省。</p></div>
+                </div>
+                <p class="text-sm italic mt-3 text-center" data-lang-key="territory_map_caption">圖為乾隆時期清朝疆域圖。點擊地圖上的<i class="fas fa-star text-yellow-500"></i>圖標查看更多資訊。</p>
+              </div>
+              <div class="lg:w-2/5 scroll-reveal" style="transition-delay: 0.2s;">
+                <p class="text-xl leading-loose mb-6" data-lang-key="territory_p1">清朝疆域在乾隆時期達到頂峰，超過1300萬平方公里。北接西伯利亞，南至南海諸島，西抵蔥嶺與巴爾喀什湖，東臨太平洋，是中國歷史上版圖最為遼闊的時期之一。</p>
+                <div class="info-card p-6 rounded-lg">
+                  <h3 class="font-bold text-2xl text-blue-800 mb-4" data-lang-key="territory_stats_title">領土數據</h3>
+                  <div class="space-y-3">
+                    <div class="flex justify-between text-lg border-b border-dotted border-yellow-500 pb-2"><span class="font-semibold" data-lang-key="territory_stats_1a">乾隆鼎盛疆域</span><span data-lang-key="territory_stats_1b">約1316萬平方公里</span></div>
+                    <div class="flex justify-between text-lg border-b border-dotted border-yellow-500 pb-2"><span class="font-semibold" data-lang-key="territory_stats_2a">晚清實際控制</span><span data-lang-key="territory_stats_2b">約1100萬平方公里</span></div>
+                    <div class="flex justify-between text-lg border-b border-dotted border-yellow-500 pb-2"><span class="font-semibold" data-lang-key="territory_stats_3a">鼎盛人口</span><span data-lang-key="territory_stats_3b">約4.3億 (1851年)</span></div>
+                    <div class="flex justify-between text-lg"><span class="font-semibold" data-lang-key="territory_stats_4a">主要首都</span><span data-lang-key="territory_stats_4b">北京 (京師)</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 5: 重要皇帝 -->
+      <section id="emperors" class="slide-section has-bg-image">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="emperors_title">重要皇帝</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-4">
+              <div class="styled-card scroll-reveal">
+                <div class="image-container-styled mb-4" style="height: 250px;">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Kangxi_Emperor.jpg/250px-Kangxi_Emperor.jpg" alt="康熙帝" onerror="this.onerror=null;this.src='https://placehold.co/400x400?text=康熙帝'">
+                </div>
+                <div class="border-b-2 border-yellow-500 pb-2 mb-3">
+                  <div class="text-3xl font-bold text-blue-800" data-lang-key="emperor_1_name" style="font-family: var(--title-font);">清聖祖 (康熙帝)</div>
+                  <div class="text-gray-600" data-lang-key="emperor_1_reign">在位: 1661-1722</div>
+                </div>
+                <ul class="list-disc list-inside text-gray-700 space-y-2">
+                  <li data-lang-key="emperor_1_feat1">平三藩，統一台灣</li>
+                  <li data-lang-key="emperor_1_feat2">親征噶爾丹，鞏固邊防</li>
+                  <li data-lang-key="emperor_1_feat3">開啟康乾盛世，文治武功卓著</li>
+                </ul>
+              </div>
+              <div class="styled-card scroll-reveal" style="transition-delay: 0.1s;">
+                <div class="image-container-styled mb-4" style="height: 250px;">
+                  <img src="https://img.dpm.org.cn/Uploads/Picture/2019/06/10/s5cfe218c419a8.jpg" alt="雍正帝" onerror="this.onerror=null;this.src='https://placehold.co/400x400?text=雍正帝'">
+                </div>
+                <div class="border-b-2 border-yellow-500 pb-2 mb-3">
+                  <div class="text-3xl font-bold text-blue-800" data-lang-key="emperor_2_name" style="font-family: var(--title-font);">清世宗 (雍正帝)</div>
+                  <div class="text-gray-600" data-lang-key="emperor_2_reign">在位: 1722-1735</div>
+                </div>
+                <ul class="list-disc list-inside text-gray-700 space-y-2">
+                  <li data-lang-key="emperor_2_feat1">設立軍機處，強化君權</li>
+                  <li data-lang-key="emperor_2_feat2">整頓吏治，推行「攤丁入畝」</li>
+                  <li data-lang-key="emperor_2_feat3">勤於政務，承上啟下</li>
+                </ul>
+              </div>
+              <div class="styled-card scroll-reveal" style="transition-delay: 0.2s;">
+                <div class="image-container-styled mb-4" style="height: 250px;">
+                  <img src="https://img.redocn.com/sheying/20190819/qinggaozongqianlonghuangdihuaxiang_10523994.jpg" alt="乾隆帝" onerror="this.onerror=null;this.src='https://placehold.co/400x400?text=乾隆帝'">
+                </div>
+                <div class="border-b-2 border-yellow-500 pb-2 mb-3">
+                  <div class="text-3xl font-bold text-blue-800" data-lang-key="emperor_3_name" style="font-family: var(--title-font);">清高宗 (乾隆帝)</div>
+                  <div class="text-gray-600" data-lang-key="emperor_3_reign">在位: 1735-1796</div>
+                </div>
+                <ul class="list-disc list-inside text-gray-700 space-y-2">
+                  <li data-lang-key="emperor_3_feat1">自詡「十全武功」，開疆拓土</li>
+                  <li data-lang-key="emperor_3_feat2">編修《四庫全書》，大興文字獄</li>
+                  <li data-lang-key="emperor_3_feat3">盛世之下，危機醞釀</li>
+                </ul>
+              </div>
+              <div class="styled-card scroll-reveal" style="transition-delay: 0.3s;">
+                <div class="image-container-styled mb-4" style="height: 250px;">
+                  <img src="https://www.natgeomedia.com/wp-content/uploads/2017/02/empress-cixi-portrait.ngsversion.1478296649144.jpg" alt="慈禧太后" onerror="this.onerror=null;this.src='https://placehold.co/400x400?text=慈禧太后'">
+                </div>
+                <div class="border-b-2 border-yellow-500 pb-2 mb-3">
+                  <div class="text-3xl font-bold text-blue-800" data-lang-key="emperor_4_name" style="font-family: var(--title-font);">慈禧太后</div>
+                  <div class="text-gray-600" data-lang-key="emperor_4_reign">掌權: 1861-1908</div>
+                </div>
+                <ul class="list-disc list-inside text-gray-700 space-y-2">
+                  <li data-lang-key="emperor_4_feat1">垂簾聽政，晚清實際統治者</li>
+                  <li data-lang-key="emperor_4_feat2">態度保守，阻礙變法維新</li>
+                  <li data-lang-key="emperor_4_feat3">經歷多次對外戰爭失敗</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 6: 政府與制度 -->
+      <section id="government" class="slide-section has-bg-image">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="gov_title">八旗與文官體系</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <div class="flex flex-col lg:flex-row items-center gap-12 mt-8">
+              <div class="lg:w-1/2 flex flex-col gap-8">
+                <div class="styled-card scroll-reveal">
+                  <h3 class="text-2xl text-blue-800 mb-3 flex items-center font-bold"><i class="fas fa-flag mr-4 text-yellow-600 text-3xl"></i><span data-lang-key="gov_box1_title">八旗制度與綠營兵</span></h3>
+                  <p class="leading-relaxed" data-lang-key="gov_box1_desc">八旗是清代根本的社會與軍事組織，旗人擁有特權。綠營兵則是由漢人組成的常備軍。二者共同構成清朝的軍事支柱，但後期戰力衰退。</p>
+                </div>
+                <div class="styled-card scroll-reveal" style="transition-delay: 0.1s;">
+                  <h3 class="text-2xl text-blue-800 mb-3 flex items-center font-bold"><i class="fas fa-crown mr-4 text-yellow-600 text-3xl"></i><span data-lang-key="gov_box2_title">軍機處與密折制</span></h3>
+                  <p class="leading-relaxed" data-lang-key="gov_box2_desc">雍正帝設立軍機處，成為凌駕於內閣六部之上的最高權力中樞。配合密折制度，皇帝得以直接獲取資訊，君主集權達到頂點。</p>
+                </div>
+                <div class="styled-card scroll-reveal" style="transition-delay: 0.2s;">
+                  <h3 class="text-2xl text-blue-800 mb-3 flex items-center font-bold"><i class="fas fa-users mr-4 text-yellow-600 text-3xl"></i><span data-lang-key="gov_box3_title">滿漢分治與科舉</span></h3>
+                  <p class="leading-relaxed" data-lang-key="gov_box3_desc">清朝在中央和地方高級官員中實行「滿漢複職制」，以確保滿族統治。同時沿用科舉制度選拔漢族士人，但以八股文取士，禁錮思想。</p>
+                </div>
+              </div>
+              <div class="lg:w-1/2 scroll-reveal" style="transition-delay: 0.3s;">
+                <div class="h-96 w-full p-4 bg-white/80 rounded-lg shadow-inner">
+                  <canvas id="governmentChart"></canvas>
+                </div>
+                <p class="text-center mt-4 text-sm" data-lang-key="gov_chart_caption">圖表顯示清代權力結構演變。前期滿洲貴族（藍色）影響巨大，中期皇權（金色）通過軍機處達到頂峰，晚期地方漢臣（灰色）因鎮壓民變而崛起。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 7: 文化藝術 -->
+      <section id="culture" class="slide-section has-bg-image">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="culture_title">宮廷文化與工藝美術</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <p class="text-center text-xl max-w-4xl mx-auto mb-12 scroll-reveal leading-relaxed" data-lang-key="culture_intro">清代文化在專制皇權主導下，呈現出官方修書、宮廷藝術和民間戲曲三方面的高度成就。一方面是集大成的官方文化工程，另一方面是市民文化的高度繁榮。</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              <div class="styled-card flex flex-col md:flex-row bg-white overflow-hidden scroll-reveal">
+                <div class="image-container-styled md:w-1/3 flex-shrink-0">
+                  <img src="https://theme.npm.edu.tw/selection/att/collection/04001076/17010289.jpg" alt="四庫全書" onerror="this.onerror=null;this.src='https://placehold.co/400x600?text=清代典籍'">
+                </div>
+                <div class="p-5 flex flex-col justify-center flex-grow">
+                  <h3 class="text-2xl text-blue-800 font-bold mb-3 flex items-center"><i class="fas fa-book-open mr-3 text-yellow-600"></i><span data-lang-key="culture_card1_title">《四庫全書》與小說</span></h3>
+                  <p data-lang-key="culture_card1_desc">乾隆朝編修的《四庫全書》是中國古代規模最大的叢書。小說方面，《紅樓夢》的誕生代表了中國古典小說的最高峰，影響深遠。</p>
+                </div>
+              </div>
+              <div class="styled-card flex flex-col md:flex-row bg-white overflow-hidden scroll-reveal" style="transition-delay: 0.1s;">
+                <div class="image-container-styled md:w-1/3 flex-shrink-0">
+                  <img src="https://cdn-www.cw.com.tw/article/201809/article-5bade71cf347a.jpg" alt="清代琺瑯彩瓷" onerror="this.onerror=null;this.src='https://placehold.co/400x600?text=清代工藝'">
+                </div>
+                <div class="p-5 flex flex-col justify-center flex-grow">
+                  <h3 class="text-2xl text-blue-800 font-bold mb-3 flex items-center"><i class="fas fa-palette mr-3 text-yellow-600"></i><span data-lang-key="culture_card2_title">宮廷畫與京劇</span></h3>
+                  <p data-lang-key="culture_card2_desc">以郎世寧為代表的宮廷畫家融合中西技法，風格獨特。徽班進京後，融合各家之長，最終形成了國粹「京劇」。瓷器工藝以琺瑯彩、粉彩為頂峰。</p>
+                  <div class="text-lg italic text-gray-700 mt-4 pl-4 border-l-4 border-yellow-500" data-lang-key="culture_card2_quote" style="font-family: var(--cursive-font);">"滿紙荒唐言，一把辛酸淚。都云作者痴，誰解其中味？" <br>— 曹雪芹《紅樓夢》</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 8: 國際交流 (MODIFIED) -->
+      <section id="exchange" class="slide-section has-bg-image">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="exchange_title">閉關政策與列強衝擊</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <div class="flex flex-col lg:flex-row items-center gap-12 mt-8">
+              <div class="lg:w-2/5 scroll-reveal" style="transition-delay: 0.3s;">
+                <div class="image-container-styled">
+                    <img src="https://p3-sdbk2-media.byteimg.com/tos-cn-i-xv4ileqgde/4d4c356b23e84a9b9fbccbe99a441ff9~tplv-xv4ileqgde-resize-w:750.image" alt="馬戛爾尼覲見乾隆" class="w-full rounded-lg bg-white p-2" onerror="this.onerror=null;this.src='https://placehold.co/600x400?text=中西交流'">
+                </div>
+                <p class="text-sm italic mt-3 text-center" data-lang-key="exchange_img_caption">描繪馬戛爾尼使團覲見乾隆帝的畫作，反映了中西方的初次碰撞。</p>
+              </div>
+              <div class="lg:w-3/5">
+                <p class="text-xl leading-loose mb-8 scroll-reveal" data-lang-key="exchange_intro">清朝前期延續朝貢體系，但實行嚴格的海禁與「一口通商」政策。沉浸在「天朝上國」的迷夢中，對外部世界的變化反應遲鈍，最終在列強的砲火下被迫打開國門。</p>
+                <div class="space-y-6">
+                  <div class="styled-card scroll-reveal" style="transition-delay: 0.1s;">
+                    <h3 class="text-xl font-bold text-blue-800 mb-2 flex items-center"><i class="fas fa-globe-americas mr-3 text-yellow-600"></i><span data-lang-key="exchange_box1_title">天朝體系與使團來華</span></h3>
+                    <p data-lang-key="exchange_box1_desc">清廷將所有對外關係視為「宗藩朝貢」。1793年英國馬戛爾尼使團和1816年阿美士德使團的失敗，充分暴露了雙方的觀念衝突。</p>
+                  </div>
+                  <div class="styled-card scroll-reveal" style="transition-delay: 0.2s;">
+                    <h3 class="text-xl font-bold text-blue-800 mb-2 flex items-center"><i class="fas fa-file-signature mr-3 text-yellow-600"></i><span data-lang-key="exchange_box2_title">不平等條約體系</span></h3>
+                    <p data-lang-key="exchange_box2_desc">鴉片戰爭後，清政府被迫簽訂一系列不平等條約，如《南京條約》、《馬關條約》、《辛丑條約》，割地賠款，喪失主權，逐步淪為半殖民地半封建社會。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      <!-- 區塊 9: 士人與科技 -->
+      <section id="scholars" class="slide-section has-bg-image">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="scholars_title">士人與科技</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <p class="text-center text-xl max-w-4xl mx-auto mb-12 scroll-reveal leading-relaxed" data-lang-key="scholars_intro">清代前期學術以考據學為主，思想受到壓抑。晚清在內憂外患的刺激下，一批開明士大夫開始「開眼看世界」，推動學習西方的洋務運動，試圖挽救危局。</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div class="scholar-card scroll-reveal">
+                <div class="scholar-img">
+                  <img src="https://img.dpm.org.cn/Uploads/Picture/dc/10275.jpg" alt="紀昀" onerror="this.onerror=null;this.src='https://placehold.co/600x400?text=紀昀'">
+                </div>
+                <div class="scholar-content">
+                  <h3 class="scholar-name" data-lang-key="scholar_1_name">紀昀</h3>
+                  <p class="scholar-desc" data-lang-key="scholar_1_desc">清代學者、官員。乾隆時期擔任《四庫全書》總纂官，是清代官方學術的代表人物。其學識淵博，但也體現了當時文人的保守性。</p>
+                </div>
+              </div>
+              <div class="scholar-card scroll-reveal" style="transition-delay: 0.1s;">
+                <div class="scholar-img">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Lin_Zexu.jpg/250px-Lin_Zexu.jpg" alt="林則徐" onerror="this.onerror=null;this.src='https://placehold.co/600x400?text=林則徐'">
+                </div>
+                <div class="scholar-content">
+                  <h3 class="scholar-name" data-lang-key="scholar_2_name">林則徐</h3>
+                  <p class="scholar-desc" data-lang-key="scholar_2_desc">晚清政治家，虎門銷煙的執行者。他是近代中國「開眼看世界」的第一人，組織翻譯西方書報，編成《四洲志》，啟迪了後人。</p>
+                </div>
+              </div>
+              <div class="scholar-card scroll-reveal" style="transition-delay: 0.2s;">
+                <div class="scholar-img">
+                  <img src="https://images.chinatimes.com/newsphoto/2015-06-26/656/20150626004727.jpg" alt="李鴻章" onerror="this.onerror=null;this.src='https://placehold.co/600x400?text=李鴻章'">
+                </div>
+                <div class="scholar-content">
+                  <h3 class="scholar-name" data-lang-key="scholar_3_name">李鴻章</h3>
+                  <p class="scholar-desc" data-lang-key="scholar_3_desc">晚清重臣，洋務運動的主要領導者。他創辦了江南製造總局、輪船招商局和北洋水師，是清末現代化努力的代表，也簽訂了多個不平等條約。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 10: 晚清變局 -->
+      <section id="decline" class="slide-section has-bg-image">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="decline_title">晚清變局：天朝崩潰前夕</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <p class="text-center text-xl max-w-4xl mx-auto mb-12 scroll-reveal leading-relaxed" data-lang-key="decline_intro">從太平天國運動動搖國本，到洋務運動的自強嘗試，再到甲午戰敗的沉重打擊，清王朝在內外交困中步履蹣跚。戊戌變法、義和團運動等一系列事件，最終將這個古老帝國推向了革命的深淵。</p>
+            <div class="flex flex-col lg:flex-row items-center gap-12 mt-8">
+              <div class="lg:w-1/2 scroll-reveal">
+                <div class="image-container-styled h-full">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Boxer_Rebellion.jpg/1024px-Boxer_Rebellion.jpg" alt="義和團運動" class="w-full rounded-lg" onerror="this.onerror=null;this.src='https://placehold.co/800x600?text=晚清戰亂'">
+                </div>
+                <p class="text-sm italic mt-3 text-center" data-lang-key="decline_img_caption">描繪義和團運動期間衝突的畫作，反映了晚清官民與西方勢力的尖銳矛盾。</p>
+              </div>
+              <div class="lg:w-1/2 flex flex-col gap-8 scroll-reveal" style="transition-delay: 0.2s;">
+                <div class="styled-card">
+                  <h3 class="text-2xl text-blue-800 mb-3 flex items-center font-bold"><i class="fas fa-praying-hands mr-4 text-yellow-600 text-3xl"></i><span data-lang-key="decline_box1_title">太平天國運動</span></h3>
+                  <p class="leading-relaxed" data-lang-key="decline_box1_desc">由洪秀全領導的太平天國是清代規模最大的農民起義，席捲半個中國，歷時14年，極大地動搖了清朝的統治根基，並催生了湘軍、淮軍等地方漢族武裝。</p>
+                </div>
+                <div class="styled-card">
+                  <h3 class="text-2xl text-blue-800 mb-3 flex items-center font-bold"><i class="fas fa-lightbulb mr-4 text-yellow-600 text-3xl"></i><span data-lang-key="decline_box2_title">戊戌變法與義和團</span></h3>
+                  <p class="leading-relaxed" data-lang-key="decline_box2_desc">甲午戰敗後，光緒帝支持康梁發動戊戌變法，但百日即遭慈禧鎮壓。隨後的義和團運動以「扶清滅洋」為口號，最終導致八國聯軍侵華。</p>
+                </div>
+                <div class="styled-card">
+                  <h3 class="text-2xl text-blue-800 mb-3 flex items-center font-bold"><i class="fas fa-flag-checkered mr-4 text-yellow-600 text-3xl"></i><span data-lang-key="decline_box3_title">辛亥革命</span></h3>
+                  <p class="leading-relaxed" data-lang-key="decline_box3_desc">1911年武昌起義成功，南方各省紛紛響應，宣布獨立。在革命浪潮與袁世凱的雙重壓力下，1912年清帝被迫退位，帝國落下帷幕。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 11: 歷史遺產 -->
+      <section id="legacy" class="slide-section has-bg-image">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="legacy_title">歷史遺產：從帝制到共和</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <p class="text-center text-xl max-w-4xl mx-auto mb-12 scroll-reveal leading-relaxed" data-lang-key="legacy_intro">清朝的終結，標誌著中國兩千多年君主專制政體的結束。它留下的廣闊疆域、複雜的民族關係以及被迫開啟的現代化進程，都對後來的中華民國和中華人民共和國產生了深遠而複雜的影響。</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+              <div class="styled-card scroll-reveal">
+                <h3 class="text-xl font-bold text-blue-800 mb-3 flex items-center"><i class="fas fa-map-marked-alt mr-3 text-yellow-600"></i><span data-lang-key="legacy_box1_title">現代中國疆域定型</span></h3>
+                <p class="leading-relaxed" data-lang-key="legacy_box1_desc">清朝通過對蒙古、新疆、西藏和台灣的有效管轄，奠定了現代中國的基本版圖，其「五族共和」的理念也影響了後世的民族政策。</p>
+              </div>
+              <div class="styled-card scroll-reveal" style="transition-delay: 0.1s;">
+                <h3 class="text-xl font-bold text-blue-800 mb-3 flex items-center"><i class="fas fa-landmark mr-3 text-yellow-600"></i><span data-lang-key="legacy_box2_title">文化與建築遺產</span></h3>
+                <p class="leading-relaxed" data-lang-key="legacy_box2_desc">北京故宮、頤和園、承德避暑山莊等皇家園林建築，成為世界文化遺產。京劇、《紅樓夢》等文化符號，至今仍是中華文化的代表。</p>
+              </div>
+              <div class="styled-card scroll-reveal" style="transition-delay: 0.2s;">
+                <h3 class="text-xl font-bold text-blue-800 mb-3 flex items-center"><i class="fas fa-history mr-3 text-yellow-600"></i><span data-lang-key="legacy_box3_title">現代化的沉重開端</span></h3>
+                <p class="leading-relaxed" data-lang-key="legacy_box3_desc">晚清在屈辱中開啟的洋務運動、制度改革與民族主義思潮，雖未能挽救王朝，卻為中國的工業化、新式教育和政治變革播下了種子。</p>
+              </div>
+            </div>
+            <div class="quote-block p-8 my-8 scroll-reveal rounded-lg">
+              <p class="text-2xl italic leading-relaxed" data-lang-key="legacy_quote">"朕與皇上贊成共和，實為保存滿、蒙、回、藏、漢五族完全領土為一大中華民國，亦為除舊布新，與民更始。"</p>
+              <p class="text-right font-semibold mt-4 text-lg" data-lang-key="legacy_quote_author">— 節選自《清帝遜位詔書》（1912年）</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 12: 清代畫卷影音專區 -->
+      <section id="qing-video" class="slide-section has-bg-image">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="qing_video_title">清代畫卷影音專區</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            
+            <div class="scroll-reveal my-8" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; border-radius: 15px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 3px solid var(--accent-light);">
+              <iframe 
+                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+                src="https://www.youtube.com/embed/P6CcRnnfuck" 
+                title="YouTube video player" 
+                frameborder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen>
+              </iframe>
+            </div>
+
+            <p class="text-xl leading-loose max-w-4xl mx-auto mt-10 scroll-reveal" data-lang-key="qing_video_desc">
+              <!-- Content will be injected by JavaScript -->
+            </p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <script>
+    // --- 翻譯資料 ---
+    const translations = {
+      'zh-TW': {
+        nav_home: '首頁', nav_overview: '王朝總覽', nav_timeline: '大事年表', nav_territory: '疆域與地理', nav_emperors: '重要皇帝', nav_government: '政府與制度', nav_culture: '文化藝術', nav_exchange: '國際交流', nav_scholars: '士人與科技', nav_decline: '晚清變局', nav_legacy: '歷史遺產', nav_qing_video: '清代畫卷影音專區',
+        title_main: '帝國餘暉<br>The Qing Dynasty', title_dates: '西元 1644－1912 年', title_subtitle: '從清兵入關到辛亥革命', title_presenter: '一個王朝的榮耀、掙扎與落幕<br>大學歷史課程',
+        copyright: '展示照片與配樂其版權屬原創所有；純分享勿商用。',
+        tts_play_btn: '🔊 語音導讀', tts_stop_btn: '⏹️ 停止導讀',
+        overview_title: '清朝概覽：滿漢融合的帝國',
+        overview_p1: '清朝（西元1636年/1644年–1912年）是中國歷史上最後一個大一統的封建王朝，由滿族建立。它不僅繼承了明代的龐大疆域，更將其拓展至極盛，奠定了現代中國的版圖基礎。',
+        overview_p2: '從「康雍乾盛世」的輝煌，到晚清面對西方列強衝擊的掙扎與變革，清朝二百多年的歷史，是傳統中華帝國走向終結，並被迫邁向現代化的關鍵轉折點。',
+        overview_key_title: '核心特徵',
+        overview_key_1: '滿族入主中原，改變歷代漢人政權格局', overview_key_2: '強化文字獄與思想管制', overview_key_3: '開創康雍乾盛世，國力達於頂峰', overview_key_4: '實施閉關政策與「天朝上國」心態', overview_key_5: '民變與列強壓力導致晚清動盪',
+        overview_img_caption: '清代宮廷畫作，展現了帝國的威儀與複雜的宮廷文化。',
+        timeline_title: '清朝興衰年表',
+        timeline_1_title: '1644年: 順治入關', timeline_1_desc: '清軍在吳三桂引導下進入山海關，擊敗李自成，定都北京，清朝對全國的統治正式開始。',
+        timeline_2_title: '1683年: 統一台灣', timeline_2_desc: '康熙帝派遣施琅率軍攻取台灣，鄭克塽投降，明鄭時期結束，台灣正式納入清朝版圖。',
+        timeline_3_title: '1793年: 馬戛爾尼使團', timeline_3_desc: '英國馬戛爾尼使團來華，尋求通商，但因禮儀之爭與清廷的閉關心態而失敗，預示了中西衝突的到來。',
+        timeline_4_title: '1840年: 鴉片戰爭', timeline_4_desc: '第一次鴉片戰爭爆發，清軍戰敗，簽訂《南京條約》，開啟了中國近代史的「百年國恥」。',
+        timeline_5_title: '1895年: 甲午戰敗', timeline_5_desc: '甲午戰爭中，清朝北洋水師全軍覆沒，戰敗後簽訂《馬關條約》，割讓台灣、賠償巨款。',
+        timeline_6_title: '1911年: 辛亥革命', timeline_6_desc: '武昌起義引發辛亥革命，各省紛紛獨立。次年，宣統帝溥儀退位，清朝滅亡，中國兩千多年的帝制終結。',
+        territory_title: '帝國疆域之極盛',
+        territory_map_caption: '圖為乾隆時期清朝疆域圖。點擊地圖上的<i class="fas fa-star text-yellow-500"></i>圖標查看更多資訊。',
+        territory_p1: '清朝疆域在乾隆時期達到頂峰，超過1300萬平方公里。北接西伯利亞，南至南海諸島，西抵蔥嶺與巴爾喀什湖，東臨太平洋，是中國歷史上版圖最為遼闊的時期之一。',
+        territory_stats_title: '領土數據',
+        territory_stats_1a: '乾隆鼎盛疆域', territory_stats_1b: '約1316萬平方公里',
+        territory_stats_2a: '晚清實際控制', territory_stats_2b: '約1100萬平方公里',
+        territory_stats_3a: '鼎盛人口', territory_stats_3b: '約4.3億 (1851年)',
+        territory_stats_4a: '主要首都', territory_stats_4b: '北京 (京師)',
+        map_beijing_title: '北京 (京師)', map_beijing_desc: '清朝首都，是全國的政治與文化中心。紫禁城作為皇宮，見證了清朝二百餘年的興衰榮辱。',
+        map_chengde_title: '承德 (避暑山莊)', map_chengde_desc: '清代皇帝的夏宮，是處理民族事務、接見蒙藏王公及外國使節的重要場所，被稱為「第二個政治中心」。',
+        map_tibet_title: '西藏 (設駐藏大臣)', map_tibet_desc: '清朝在西藏設立駐藏大臣，與達賴、班禪共同治理，強化了中央對西藏的管轄。',
+        map_xinjiang_title: '新疆 (伊犁)', map_xinjiang_desc: '乾隆年間平定準噶爾部後，將此地命名為新疆，意為「故土新歸」。設立伊犁將軍，鞏固了西北邊防。',
+        map_taiwan_title: '台灣 (設府治)', map_taiwan_desc: '康熙年間納入版圖後設立台灣府，隸屬福建。1885年正式建省，成為清朝最年輕的行省。',
+        emperors_title: '重要皇帝',
+        emperor_1_name: '清聖祖 (康熙帝)', emperor_1_reign: '在位: 1661-1722', emperor_1_feat1: '平三藩，統一台灣', emperor_1_feat2: '親征噶爾丹，鞏固邊防', emperor_1_feat3: '開啟康乾盛世，文治武功卓著',
+        emperor_2_name: '清世宗 (雍正帝)', emperor_2_reign: '在位: 1722-1735', emperor_2_feat1: '設立軍機處，強化君權', emperor_2_feat2: '整頓吏治，推行「攤丁入畝」', emperor_2_feat3: '勤於政務，承上啟下',
+        emperor_3_name: '清高宗 (乾隆帝)', emperor_3_reign: '在位: 1735-1796', emperor_3_feat1: '自詡「十全武功」，開疆拓土', emperor_3_feat2: '編修《四庫全書》，大興文字獄', emperor_3_feat3: '盛世之下，危機醞釀',
+        emperor_4_name: '慈禧太后', emperor_4_reign: '掌權: 1861-1908', emperor_4_feat1: '垂簾聽政，晚清實際統治者', emperor_4_feat2: '態度保守，阻礙變法維新', emperor_4_feat3: '經歷多次對外戰爭失敗',
+        gov_title: '八旗與文官體系',
+        gov_box1_title: '八旗制度與綠營兵', gov_box1_desc: '八旗是清代根本的社會與軍事組織，旗人擁有特權。綠營兵則是由漢人組成的常備軍。二者共同構成清朝的軍事支柱，但後期戰力衰退。',
+        gov_box2_title: '軍機處與密折制', gov_box2_desc: '雍正帝設立軍機處，成為凌駕於內閣六部之上的最高權力中樞。配合密折制度，皇帝得以直接獲取資訊，君主集權達到頂點。',
+        gov_box3_title: '滿漢分治與科舉', gov_box3_desc: '清朝在中央和地方高級官員中實行「滿漢複職制」，以確保滿族統治。同時沿用科舉制度選拔漢族士人，但以八股文取士，禁錮思想。',
+        gov_chart_caption: '圖表顯示清代權力結構演變。前期滿洲貴族（藍色）影響巨大，中期皇權（金色）通過軍機處達到頂峰，晚期地方漢臣（灰色）因鎮壓民變而崛起。',
+        culture_title: '宮廷文化與工藝美術',
+        culture_intro: '清代文化在專制皇權主導下，呈現出官方修書、宮廷藝術和民間戲曲三方面的高度成就。一方面是集大成的官方文化工程，另一方面是市民文化的高度繁榮。',
+        culture_card1_title: '《四庫全書》與小說', culture_card1_desc: '乾隆朝編修的《四庫全書》是中國古代規模最大的叢書。小說方面，《紅樓夢》的誕生代表了中國古典小說的最高峰，影響深遠。',
+        culture_card2_title: '宮廷畫與京劇', culture_card2_desc: '以郎世寧為代表的宮廷畫家融合中西技法，風格獨特。徽班進京後，融合各家之長，最終形成了國粹「京劇」。瓷器工藝以琺瑯彩、粉彩為頂峰。',
+        culture_card2_quote: '"滿紙荒唐言，一把辛酸淚。都云作者痴，誰解其中味？" <br>— 曹雪芹《紅樓夢》',
+        exchange_title: '閉關政策與列強衝擊',
+        exchange_intro: '清朝前期延續朝貢體系，但實行嚴格的海禁與「一口通商」政策。沉浸在「天朝上國」の迷夢中，對外部世界的變化反應遲鈍，最終在列強的砲火下被迫打開國門。',
+        exchange_box1_title: '天朝體系與使團來華', exchange_box1_desc: '清廷將所有對外關係視為「宗藩朝貢」。1793年英國馬戛爾尼使團和1816年阿美士德使團的失敗，充分暴露了雙方的觀念衝突。',
+        exchange_box2_title: '不平等條約體系', exchange_box2_desc: '鴉片戰爭後，清政府被迫簽訂一系列不平等條約，如《南京條約》、《馬關條約》、《辛丑條約》，割地賠款，喪失主權，逐步淪為半殖民地半封建社會。',
+        exchange_img_caption: '描繪馬戛爾尼使團覲見乾隆帝的畫作，反映了中西方的初次碰撞。',
+        scholars_title: '士人與科技',
+        scholars_intro: '清代前期學術以考據學為主，思想受到壓抑。晚清在內憂外患的刺激下，一批開明士大夫開始「開眼看世界」，推動學習西方的洋務運動，試圖挽救危局。',
+        scholar_1_name: '紀昀', scholar_1_desc: '清代學者、官員。乾隆時期擔任《四庫全書》總纂官，是清代官方學術的代表人物。其學識淵博，但也體現了當時文人的保守性。',
+        scholar_2_name: '林則徐', scholar_2_desc: '晚清政治家，虎門銷煙的執行者。他是近代中國「開眼看世界」的第一人，組織翻譯西方書報，編成《四洲志》，啟迪了後人。',
+        scholar_3_name: '李鴻章', scholar_3_desc: '晚清重臣，洋務運動的主要領導者。他創辦了江南製造總局、輪船招商局和北洋水師，是清末現代化努力的代表，也簽訂了多個不平等條約。',
+        decline_title: '晚清變局：天朝崩潰前夕',
+        decline_intro: '從太平天國運動動搖國本，到洋務運動的自強嘗試，再到甲午戰敗的沉重打擊，清王朝在內外交困中步履蹣跚。戊戌變法、義和團運動等一系列事件，最終將這個古老帝國推向了革命的深淵。',
+        decline_img_caption: '描繪義和團運動期間衝突的畫作，反映了晚清官民與西方勢力的尖銳矛盾。',
+        decline_box1_title: '太平天國運動', decline_box1_desc: '由洪秀全領導的太平天國是清代規模最大的農民起義，席捲半個中國，歷時14年，極大地動搖了清朝的統治根基，並催生了湘軍、淮軍等地方漢族武裝。',
+        decline_box2_title: '戊戌變法與義和團', decline_box2_desc: '甲午戰敗後，光緒帝支持康梁發動戊戌變法，但百日即遭慈禧鎮壓。隨後的義和團運動以「扶清滅洋」為口號，最終導致八國聯軍侵華。',
+        decline_box3_title: '辛亥革命', decline_box3_desc: '1911年武昌起義成功，南方各省紛紛響應，宣布獨立。在革命浪潮與袁世凱的雙重壓力下，1912年清帝被迫退位，帝國落下帷幕。',
+        legacy_title: '歷史遺產：從帝制到共和',
+        legacy_intro: '清朝的終結，標誌著中國兩千多年君主專制政體的結束。它留下的廣闊疆域、複雜的民族關係以及被迫開啟的現代化進程，都對後來的中華民國和中華人民共和國產生了深遠而複雜的影響。',
+        legacy_box1_title: '現代中國疆域定型', legacy_box1_desc: '清朝通過對蒙古、新疆、西藏和台灣的有效管轄，奠定了現代中國的基本版圖，其「五族共和」的理念也影響了後世的民族政策。',
+        legacy_box2_title: '文化與建築遺產', legacy_box2_desc: '北京故宮、頤和園、承德避暑山莊等皇家園林建築，成為世界文化遺產。京劇、《紅樓夢》等文化符號，至今仍是中華文化的代表。',
+        legacy_box3_title: '現代化的沉重開端', legacy_box3_desc: '晚清在屈辱中開啟的洋務運動、制度改革與民族主義思潮，雖未能挽救王朝，卻為中國的工業化、新式教育和政治變革播下了種子。',
+        legacy_quote: '"朕與皇上贊成共和，實為保存滿、蒙、回、藏、漢五族完全領土為一大中華民國，亦為除舊布新，與民更始。"',
+        legacy_quote_author: '— 節選自《清帝遜位詔書》（1912年）',
+        qing_video_title: '清代畫卷影音專區',
+        qing_video_desc: '<strong>關於晚清人民生活</strong><br><br>這段珍貴的歷史影像，記錄了19世紀末至20世紀初，清朝走向末路時普通百姓的真實生活樣貌。畫面中，我們可以看到傳統的街景、市集、服飾，以及在時代變遷中人們的表情與活動。<br><br>這些影像不僅是視覺的震撼，更是理解那個動盪時代社會底層脈動的窗口。從農耕、手工業到初興的城市景象，它立體地呈現了一個古老帝國在被迫面對現代化衝擊時，人民日常生活的堅韌與無奈，為研究晚清社會史提供了無可取代的生動素材。',
+        chart_gov_title: '清代權力結構演變 (示意圖)',
+        chart_gov_label_manchu: '滿洲貴族議政', chart_gov_label_emperor: '皇權/軍機處', chart_gov_label_han: '地方漢臣督撫',
+        chart_gov_yaxis: '相對影響力指數',
+      },
+      'en': {
+        nav_home: 'Home', nav_overview: 'Overview', nav_timeline: 'Timeline', nav_territory: 'Territory', nav_emperors: 'Emperors', nav_government: 'Government', nav_culture: 'Culture & Art', nav_exchange: 'Exchange', nav_scholars: 'Scholars & Tech', nav_decline: 'Late Qing Turmoil', nav_legacy: 'Legacy', nav_qing_video: 'Qing Art Scroll',
+        title_main: 'Imperial Sunset<br>The Qing Dynasty', title_dates: '1644 - 1912 CE', title_subtitle: 'From the Manchu Conquest to the Xinhai Revolution', title_presenter: 'The Glory, Struggle, and Fall of a Dynasty<br>University History Course',
+        copyright: 'The copyright of photos and music belongs to the original creators. For sharing purposes only, not for commercial use.',
+        tts_play_btn: '🔊 Read Aloud', tts_stop_btn: '⏹️ Stop Reading',
+        overview_title: 'Qing Overview: An Empire of Manchu-Han Fusion',
+        overview_p1: 'The Qing Dynasty (1636/1644–1912 CE) was the last imperial dynasty of China, established by the Manchu people. It not only inherited the vast territory of the Ming Dynasty but also expanded it to its greatest extent, laying the foundation for the map of modern China.',
+        overview_p2: 'From the splendor of the "High Qing era" under Kangxi, Yongzheng, and Qianlong, to the struggles and reforms in the face of Western powers, the more than 200-year history of the Qing is a critical turning point where the traditional Chinese empire ended and was forced to modernize.',
+        overview_key_title: 'Key Characteristics',
+        overview_key_1: 'Manchu rule over China, changing the Han-dominated political landscape', overview_key_2: 'Strengthened literary inquisition and thought control', overview_key_3: 'Created the High Qing era, with national power at its zenith', overview_key_4: 'Implemented isolationist policies and a "Celestial Empire" mentality', overview_key_5: 'Late Qing turmoil caused by rebellions and foreign pressure',
+        overview_img_caption: 'A Qing court painting, showcasing the empire\'s majesty and complex court culture.',
+        timeline_title: 'Timeline of the Rise and Fall of the Qing',
+        timeline_1_title: '1644: Shunzhi Enters the Pass', timeline_1_desc: 'The Qing army, led by Wu Sangui, entered Shanhai Pass, defeated Li Zicheng, and established Beijing as the capital, marking the official start of Qing rule over China.',
+        timeline_2_title: '1683: Unification of Taiwan', timeline_2_desc: 'Emperor Kangxi dispatched Shi Lang to conquer Taiwan. Koxinga\'s grandson surrendered, ending the Kingdom of Tungning and formally incorporating Taiwan into the Qing empire.',
+        timeline_3_title: '1793: Macartney Embassy', timeline_3_desc: 'The British Macartney Embassy arrived in China seeking trade but failed due to disputes over court etiquette and the Qing\'s isolationist mindset, foreshadowing future Sino-Western conflicts.',
+        timeline_4_title: '1840: The Opium War', timeline_4_desc: 'The First Opium War broke out. The Qing\'s defeat led to the Treaty of Nanking, beginning the "Century of Humiliation" in modern Chinese history.',
+        timeline_5_title: '1895: Defeat in the Jiawu War', timeline_5_desc: 'The Beiyang Fleet was annihilated in the First Sino-Japanese War. The defeat resulted in the Treaty of Shimonoseki, ceding Taiwan and paying massive indemnities.',
+        timeline_6_title: '1911: Xinhai Revolution', timeline_6_desc: 'The Wuchang Uprising sparked the Xinhai Revolution, with provinces declaring independence. The next year, Emperor Puyi abdicated, ending the Qing Dynasty and over two millennia of imperial rule in China.',
+        territory_title: 'The Empire at Its Zenith',
+        territory_map_caption: 'Map of the Qing Empire during the Qianlong era. Click the <i class="fas fa-star text-yellow-500"></i> icons for more info.',
+        territory_p1: 'The territory of the Qing Dynasty reached its peak during the Qianlong era, exceeding 13 million square kilometers. It stretched from Siberia in the north to the South China Sea islands in the south, from the Pamir Mountains in the west to the Pacific Ocean in the east, one of the largest empires in Chinese history.',
+        territory_stats_title: 'Territorial Statistics',
+        territory_stats_1a: 'Qianlong Peak Area', territory_stats_1b: '≈13.16 million km²',
+        territory_stats_2a: 'Late Qing Control', territory_stats_2b: '≈11.00 million km²',
+        territory_stats_3a: 'Peak Population', territory_stats_3b: '≈430 million (1851 CE)',
+        territory_stats_4a: 'Main Capital', territory_stats_4b: 'Beijing (Jingshi)',
+        map_beijing_title: 'Beijing (Jingshi)', map_beijing_desc: 'The capital of the Qing, serving as the political and cultural center. The Forbidden City, as the imperial palace, witnessed the rise and fall of the dynasty over 200 years.',
+        map_chengde_title: 'Chengde (Mountain Resort)', map_chengde_desc: 'The summer palace of the Qing emperors, it was a vital location for managing ethnic affairs and receiving Mongol, Tibetan, and foreign dignitaries, known as the "second political center."',
+        map_tibet_title: 'Tibet (Amban Appointed)', map_tibet_desc: 'The Qing established the Amban (imperial resident) in Tibet, who governed alongside the Dalai and Panchen Lamas, strengthening central control over the region.',
+        map_xinjiang_title: 'Xinjiang (Ili)', map_xinjiang_desc: 'After pacifying the Dzungar Khanate, Qianlong named the region Xinjiang, meaning "New Frontier." The General of Ili was established to consolidate the northwestern border.',
+        map_taiwan_title: 'Taiwan (Prefecture Established)', map_taiwan_desc: 'Incorporated during the Kangxi reign, Taiwan Prefecture was established under Fujian province. It officially became a province in 1885, the youngest in the Qing Dynasty.',
+        emperors_title: 'Major Emperors',
+        emperor_1_name: 'Emperor Kangxi', emperor_1_reign: 'Reign: 1661-1722', emperor_1_feat1: 'Suppressed the Three Feudatories, unified Taiwan', emperor_1_feat2: 'Led expeditions against Galdan, secured borders', emperor_1_feat3: 'Initiated the High Qing era, a great ruler',
+        emperor_2_name: 'Emperor Yongzheng', emperor_2_reign: 'Reign: 1722-1735', emperor_2_feat1: 'Established the Grand Council, centralized power', emperor_2_feat2: 'Reformed administration, implemented tax policies', emperor_2_feat3: 'A diligent and pivotal emperor',
+        emperor_3_name: 'Emperor Qianlong', emperor_3_reign: 'Reign: 1735-1796', emperor_3_feat1: 'Claimed "Ten Great Campaigns," expanded territory', emperor_3_feat2: 'Compiled the Siku Quanshu, launched literary inquisitions', emperor_3_feat3: 'Sowed seeds of crisis beneath a prosperous facade',
+        emperor_4_name: 'Empress Dowager Cixi', emperor_4_reign: 'Power held: 1861-1908', emperor_4_feat1: 'Ruled from behind the curtain, de facto ruler of late Qing', emperor_4_feat2: 'Conservative attitude, hindered reforms', emperor_4_feat3: 'Oversaw multiple defeats in foreign wars',
+        gov_title: 'The Eight Banners & Civil Bureaucracy',
+        gov_box1_title: 'Banner System & Green Standard Army', gov_box1_desc: 'The Eight Banners were the fundamental social and military organization of the Qing, with Bannermen holding special privileges. The Green Standard Army was a standing army composed of Han Chinese. Together, they were the military backbone, but their effectiveness declined over time.',
+        gov_box2_title: 'Grand Council & Palace Memorials', gov_box2_desc: 'Emperor Yongzheng established the Grand Council, which became the supreme power center above the Grand Secretariat and the Six Ministries. Combined with the secret Palace Memorial system, it allowed the emperor to centralize power to an unprecedented degree.',
+        gov_box3_title: 'Manchu-Han Dyarchy & Civil Exams', gov_box3_desc: 'The Qing implemented a "dyarchy" system for high-ranking central and provincial posts to ensure Manchu dominance. It continued to use the civil service examinations to recruit Han scholars, but the rigid "eight-legged essay" format stifled creative thought.',
+        gov_chart_caption: 'Diagram showing the evolution of the Qing power structure. Early on, Manchu nobles (blue) had great influence. In the mid-Qing, imperial power (gold) peaked via the Grand Council. In the late period, regional Han officials (gray) rose to prominence by suppressing rebellions.',
+        culture_title: 'Court Culture & Decorative Arts',
+        culture_intro: 'Dominated by the autocratic imperial power, Qing culture achieved high levels of attainment in official scholarship, court art, and popular opera. It represented both a culmination of official cultural projects and a great flourishing of urban culture.',
+        culture_card1_title: 'Siku Quanshu & Novels', culture_card1_desc: 'The "Complete Library of the Four Treasuries," compiled during the Qianlong reign, is the largest collection of books in ancient China. In fiction, "Dream of the Red Chamber" represents the pinnacle of classical Chinese novels, with profound influence.',
+        culture_card2_title: 'Court Painting & Peking Opera', culture_card2_desc: 'Court painters like Giuseppe Castiglione blended Chinese and Western techniques, creating a unique style. After Anhui opera troupes entered Beijing, they merged various styles to form the national quintessence, "Peking Opera." Porcelain crafts peaked with falangcai and fencai styles.',
+        culture_card2_quote: '"Pages full of absurd words, Penned with bitter tears. All say the author is a fool, But who can taste the meaning clear?" <br>— Cao Xueqin, Dream of the Red Chamber',
+        exchange_title: 'Isolationism and the Impact of Powers',
+        exchange_intro: 'The early Qing continued the tribute system but implemented strict maritime bans and the "Canton System." Immersed in the dream of being the "Celestial Empire," it was slow to react to changes in the outside world and was ultimately forced to open its doors by foreign cannons.',
+        exchange_box1_title: 'Tribute System & Embassies', exchange_box1_desc: 'The Qing court viewed all foreign relations as tributary. The failures of the British Macartney Embassy in 1793 and the Amherst Embassy in 1816 fully exposed the conceptual clash between China and the West.',
+        exchange_box2_title: 'The Unequal Treaty System', exchange_box2_desc: 'After the Opium War, the Qing was forced to sign a series of unequal treaties, such as the Treaty of Nanking, the Treaty of Shimonoseki, and the Boxer Protocol, ceding territory, paying indemnities, and gradually becoming a semi-colonial, semi-feudal society.',
+        exchange_img_caption: 'A painting depicting the Macartney Embassy\'s audience with the Qianlong Emperor, reflecting the initial collision between China and the West.',
+        scholars_title: 'Scholars & Technology',
+        scholars_intro: 'In the early Qing, scholarship was dominated by evidential research, and thought was suppressed. In the late Qing, stimulated by internal and external crises, a group of enlightened scholar-officials began to "open their eyes to the world" and promoted the Self-Strengthening Movement to save the dynasty.',
+        scholar_1_name: 'Ji Yun', scholar_1_desc: 'A Qing scholar and official. He served as the chief editor of the "Siku Quanshu" during the Qianlong era, representing official scholarship. His vast knowledge also embodied the conservatism of the literati of his time.',
+        scholar_2_name: 'Lin Zexu', scholar_2_desc: 'A late-Qing statesman, known for destroying opium at Humen. He was the first modern Chinese figure to "open his eyes to the world," commissioning translations of Western works to compile the "Gazetteer of the Four Continents."',
+        scholar_3_name: 'Li Hongzhang', scholar_3_desc: 'A leading statesman of the late Qing and a key leader of the Self-Strengthening Movement. He founded modern arsenals, shipping companies, and the Beiyang Fleet, representing modernization efforts, but also signed several unequal treaties.',
+        decline_title: 'Late Qing Turmoil: On the Eve of Collapse',
+        decline_intro: 'From the Taiping Rebellion that shook its foundations, to the Self-Strengthening Movement\'s attempts at reform, and the devastating blow of the Jiawu War, the Qing Dynasty staggered amidst internal and external crises. A series of events, including the Wuxu Reform and the Boxer Rebellion, finally pushed the old empire into the abyss of revolution.',
+        decline_img_caption: 'A painting of conflicts during the Boxer Rebellion, reflecting the sharp contradictions between the Qing government, its people, and Western powers.',
+        decline_box1_title: 'Taiping Rebellion', decline_box1_desc: 'Led by Hong Xiuquan, this was the largest peasant uprising of the Qing, sweeping across half of China for 14 years. It severely weakened the Qing\'s foundation and led to the rise of regional Han armies like the Xiang and Huai armies.',
+        decline_box2_title: 'Wuxu Reform & Boxer Rebellion', decline_box2_desc: 'After the Jiawu defeat, the Guangxu Emperor supported the Hundred Days\' Reform, but it was suppressed by Cixi. The subsequent Boxer Rebellion, with its slogan to "Support the Qing, exterminate the foreigners," led to the Eight-Nation Alliance invasion.',
+        decline_box3_title: 'Xinhai Revolution', decline_box3_desc: 'The Wuchang Uprising of 1911 succeeded, and southern provinces declared independence. Under pressure from revolutionaries and Yuan Shikai, the Qing emperor was forced to abdicate in 1912, bringing the imperial era to a close.',
+        legacy_title: 'Legacy: From Empire to Republic',
+        legacy_intro: 'The end of the Qing marked the end of over two millennia of imperial monarchy in China. Its legacy—a vast territory, complex ethnic relations, and a forced modernization process—has had a profound and complex impact on the subsequent Republic of China and the People\'s Republic of China.',
+        legacy_box1_title: 'Shaping Modern China\'s Territory', legacy_box1_desc: 'Through its effective governance of Mongolia, Xinjiang, Tibet, and Taiwan, the Qing laid the basic territorial foundation of modern China. Its concept of a "republic of five peoples" also influenced later ethnic policies.',
+        legacy_box2_title: 'Cultural and Architectural Heritage', legacy_box2_desc: 'The Forbidden City, Summer Palace, and Chengde Mountain Resort are now World Heritage sites. Cultural symbols like Peking Opera and "Dream of the Red Chamber" remain icons of Chinese culture.',
+        legacy_box3_title: 'A Painful Start to Modernization', legacy_box3_desc: 'The late Qing\'s humiliating start to modernization—including the Self-Strengthening Movement, institutional reforms, and nationalist ideologies—failed to save the dynasty but planted the seeds for China\'s industrialization, new education, and political transformation.',
+        legacy_quote: '"We, the Emperor, approve of a republican government, to preserve the complete territory of the five races—Manchu, Mongol, Hui, Tibetan, and Han—as one great Republic of China, and to usher in a new era for the people."',
+        legacy_quote_author: '— Abridged from the Imperial Edict of Abdication of the Qing Emperor (1912)',
+        qing_video_title: 'Qing Art Scroll Showcase',
+        qing_video_desc: "<strong>About Life in the Late Qing Dynasty</strong><br><br>This precious historical footage captures the authentic daily lives of ordinary people as the Qing Dynasty approached its end, from the late 19th to the early 20th century. In these scenes, we can observe traditional streetscapes, markets, attire, and the expressions and activities of people amidst a transformative era.<br><br>This footage is not just visually striking; it is a window into the pulse of the lower echelons of society during that turbulent time. From agriculture and handicrafts to the nascent urban scenes, it vividly presents the resilience and helplessness of the people as an ancient empire was forced to confront the impact of modernization, providing irreplaceable, lively material for studying late Qing social history.",
+        chart_gov_title: 'Evolution of Qing Power Structure (Schematic)',
+        chart_gov_label_manchu: 'Manchu Nobility', chart_gov_label_emperor: 'Imperial Power/Grand Council', chart_gov_label_han: 'Regional Han Officials',
+        chart_gov_yaxis: 'Relative Influence Index',
+      }
+    };
+
+    // --- 核心腳本 ---
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        const AUTOPLAY_INTERVAL = 8000;
+        
+        const playlist = [
+            'https://ping763573.github.io/big-adventure/14.mp3',
+            'https://ping763573.github.io/big-adventure/13.mp3'
+        ];
+        let currentTrackIndex = 0;
+
+        let currentLang = 'zh-TW';
+        let isAutoplaying = false;
+        let autoplayTimeoutId;
+        let currentSectionIndex = 0;
+        let currentlySpeakingSection = null;
+        let isManuallyStopped = false; 
+        let activeLockSection = null;
+
+        const sections = Array.from(document.querySelectorAll('main > section'));
+        const langToggleBtn = document.getElementById('lang-toggle');
+        const autoplayToggleBtn = document.getElementById('autoplay-toggle');
+        const fullscreenToggleBtn = document.getElementById('fullscreen-toggle');
+        const musicToggleBtn = document.getElementById('music-toggle');
+        const toTopBtn = document.getElementById('to-top-btn');
+        const bgMusic = document.getElementById('bg-music');
+        const navbar = document.querySelector('.navbar');
+        
+        bgMusic.src = playlist[currentTrackIndex]; 
+        bgMusic.addEventListener('ended', () => {
+            currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+            bgMusic.src = playlist[currentTrackIndex];
+            bgMusic.play();
+        });
+
+        function lockScreenToSection(section) {
+            document.body.classList.add('tts-active');
+            activeLockSection = section;
+        }
+        function unlockScreen() {
+            document.body.classList.remove('tts-active');
+            activeLockSection = null;
+        }
+        function setTtsButtonState(button, isPlaying) {
+            const playKey = 'tts_play_btn';
+            const stopKey = 'tts_stop_btn';
+            if (isPlaying) {
+                button.innerHTML = translations[currentLang][stopKey] || '⏹️ Stop Reading';
+                button.classList.add('is-playing');
+            } else {
+                button.innerHTML = translations[currentLang][playKey] || '🔊 Read Aloud';
+                button.classList.remove('is-playing');
+            }
+        }
+        function updateLanguage() {
+            document.documentElement.lang = currentLang;
+            document.querySelectorAll('[data-lang-key]').forEach(el => {
+                const key = el.dataset.langKey;
+                if (translations[currentLang] && translations[currentLang][key]) {
+                    if (el.classList.contains('tts-btn') && el.classList.contains('is-playing')) {
+                         el.innerHTML = translations[currentLang]['tts_stop_btn'];
+                    } else {
+                         el.innerHTML = translations[currentLang][key];
+                    }
+                }
+            });
+            initializeAllCharts(currentLang);
+        }
+        langToggleBtn.addEventListener('click', () => {
+            currentLang = currentLang === 'zh-TW' ? 'en' : 'zh-TW';
+            updateLanguage();
+        });
+        function getCleanTextForTTS(section) {
+            const contentContainer = section.querySelector('.content-container');
+            if (!contentContainer) return "";
+            const clone = contentContainer.cloneNode(true);
+            clone.querySelectorAll('.tts-btn, .section-title, .image-container-styled, canvas, .scholar-img, iframe, .hotspot, .info-box').forEach(el => el.remove());
+            const title = section.querySelector('.section-title')?.innerText || '';
+            const body = clone.innerText.trim().replace(/\s+/g, ' ');
+            return `${title}. ${body}`;
+        }
+        function stopAutoscroll() {
+            isAutoplaying = false;
+            document.body.classList.remove('autoplay-active'); 
+            autoplayToggleBtn.innerHTML = '<i class="fas fa-play"></i>';
+            clearTimeout(autoplayTimeoutId);
+        }
+        function stopSpeech() {
+            if (!speechSynthesis.speaking) return;
+            isManuallyStopped = true; 
+            speechSynthesis.cancel(); 
+        }
+        function speakSection(section, onEndCallback) {
+            const textToSpeak = getCleanTextForTTS(section);
+            if (!textToSpeak) { if (onEndCallback) onEndCallback(); return; }
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = currentLang === 'en' ? 'en-US' : 'zh-TW';
+            const ttsBtn = section.querySelector('.tts-btn');
+            utterance.onstart = () => {
+                currentlySpeakingSection = section;
+                if (ttsBtn) setTtsButtonState(ttsBtn, true);
+                lockScreenToSection(section);
+            };
+            utterance.onend = () => {
+                const wasManuallyStopped = isManuallyStopped;
+                if (currentlySpeakingSection === section) { if (ttsBtn) setTtsButtonState(ttsBtn, false); currentlySpeakingSection = null; }
+                unlockScreen();
+                if (onEndCallback && !wasManuallyStopped) onEndCallback();
+            };
+            utterance.onerror = (e) => {
+                console.error("Speech synthesis error:", e);
+                if (currentlySpeakingSection === section) { if (ttsBtn) setTtsButtonState(ttsBtn, false); currentlySpeakingSection = null; }
+                unlockScreen();
+                if (onEndCallback) onEndCallback();
+            };
+            isManuallyStopped = false; 
+            speechSynthesis.speak(utterance);
+        }
+        function playAndAdvance() {
+            if (!isAutoplaying) return;
+            clearTimeout(autoplayTimeoutId);
+            const section = sections[currentSectionIndex];
+            if (!section) { stopAutoscroll(); return; }
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            autoplayTimeoutId = setTimeout(() => {
+                if (isAutoplaying) {
+                    // This logic skips the last section (the video) by looping back when on the second to last section.
+                    currentSectionIndex = (currentSectionIndex >= sections.length - 2) ? 0 : currentSectionIndex + 1;
+                    playAndAdvance();
+                }
+            }, AUTOPLAY_INTERVAL);
+        }
+        function startAutoscroll() {
+            if (isAutoplaying) return;
+            if (speechSynthesis.speaking) { speechSynthesis.cancel(); }
+            isAutoplaying = true;
+            document.body.classList.add('autoplay-active'); 
+            autoplayToggleBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            
+            let mostVisibleSectionIndex = 0; let maxVisibility = 0;
+            sections.forEach((section, index) => {
+                const rect = section.getBoundingClientRect();
+                const vh = window.innerHeight || document.documentElement.clientHeight;
+                const visibleHeight = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0));
+                if (visibleHeight > maxVisibility) { maxVisibility = visibleHeight; mostVisibleSectionIndex = index; }
+            });
+
+            if (sections[mostVisibleSectionIndex] && sections[mostVisibleSectionIndex].id === 'qing-video') {
+                currentSectionIndex = 0;
+            } else {
+                currentSectionIndex = mostVisibleSectionIndex;
+            }
+            playAndAdvance();
+        }
+        autoplayToggleBtn.addEventListener('click', () => { isAutoplaying ? stopAutoscroll() : startAutoscroll(); });
+
+        function updateFullscreenIcon() {
+            fullscreenToggleBtn.innerHTML = !document.fullscreenElement ? '<i class="fas fa-expand"></i>' : '<i class="fas fa-compress"></i>';
+        }
+        fullscreenToggleBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => alert(`無法進入全螢幕模式: ${err.message}`));
+            } else { if (document.exitFullscreen) document.exitFullscreen(); }
+        });
+        document.addEventListener('fullscreenchange', updateFullscreenIcon);
+        musicToggleBtn.addEventListener('click', () => {
+            if (bgMusic.paused) {
+                bgMusic.play().catch(e => console.log("音樂自動播放被瀏覽器阻止。"));
+                musicToggleBtn.innerHTML = '<i class="fas fa-music"></i>';
+            } else { bgMusic.pause(); musicToggleBtn.innerHTML = '<i class="fas fa-volume-mute"></i>'; }
+        });
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+        }, { threshold: 0.15 });
+        document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
+        function getCurrentSectionId() {
+            let current = '';
+            for (const section of sections) {
+                const sectionTop = section.offsetTop;
+                if (window.scrollY >= sectionTop - 200) current = section.getAttribute('id');
+            }
+            return current;
+        }
+        window.addEventListener('scroll', () => {
+            if(document.body.classList.contains('tts-active')) return;
+            if (window.pageYOffset > 300) toTopBtn.style.display = 'flex'; else toTopBtn.style.display = 'none';
+            if (window.scrollY > 50) navbar.classList.add('scrolled'); else navbar.classList.remove('scrolled');
+            
+            const current = getCurrentSectionId();
+            document.querySelectorAll('.nav-links a').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').includes(current)) link.classList.add('active');
+            });
+        });
+        toTopBtn.addEventListener('click', () => { stopAutoscroll(); stopSpeech(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        document.querySelectorAll('.nav-links a').forEach(link => { link.addEventListener('click', () => { stopAutoscroll(); stopSpeech(); }); });
+        
+        document.querySelectorAll('.hotspot').forEach(hotspot => {
+          hotspot.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const targetId = hotspot.dataset.target;
+            const infoBox = document.getElementById(targetId);
+            const isVisible = infoBox.style.display === 'block';
+            document.querySelectorAll('.info-box').forEach(box => box.style.display = 'none');
+            if (infoBox && !isVisible) infoBox.style.display = 'block';
+          });
+        });
+        document.addEventListener('click', () => { document.querySelectorAll('.info-box').forEach(box => box.style.display = 'none'); });
+        
+        document.querySelectorAll('.tts-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                if (isAutoplaying) return;
+                const section = button.closest('.slide-section');
+                if (!section) return;
+                const wasSpeakingThisSection = (currentlySpeakingSection === section && speechSynthesis.speaking);
+                stopSpeech();
+                if (!wasSpeakingThisSection) { speakSection(section, null); }
+            });
+        });
+
+        let charts = {};
+        function initializeAllCharts(lang) {
+            const langData = translations[lang];
+            const titleFont = { family: "'Noto Serif TC', serif", size: 20, weight: 'bold' };
+            const bodyFont = { family: "'Noto Serif TC', serif", size: 16 };
+            const primaryColor = '#4A4676';
+            const accentColor = '#E8B44A';
+            const secondaryColor = '#6c757d';
+            const darkText = '#333333';
+
+            Object.keys(charts).forEach(id => { if(charts[id]) charts[id].destroy(); });
+
+            Chart.defaults.color = darkText; 
+            Chart.defaults.font.family = "'Noto Serif TC', serif";
+
+            if (document.getElementById('governmentChart')) {
+              const ctx = document.getElementById('governmentChart').getContext('2d');
+              charts.government = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                  labels: lang === 'zh-TW' ? ['清初', '康雍乾', '晚清'] : ['Early Qing', 'High Qing', 'Late Qing'],
+                  datasets: [
+                    { label: langData.chart_gov_label_manchu, data: [70, 30, 10], backgroundColor: 'rgba(74, 70, 118, 0.7)', borderColor: primaryColor, borderWidth: 2 }, 
+                    { label: langData.chart_gov_label_emperor, data: [40, 80, 20], backgroundColor: 'rgba(232, 180, 74, 0.7)', borderColor: accentColor, borderWidth: 2 },
+                    { label: langData.chart_gov_label_han, data: [10, 20, 70], backgroundColor: 'rgba(108, 117, 125, 0.7)', borderColor: secondaryColor, borderWidth: 2 }
+                  ]
+                },
+                options: { 
+                  responsive: true, maintainAspectRatio: false,
+                  plugins: { title: { display: true, text: langData.chart_gov_title, font: titleFont, color: primaryColor }, legend: { position: 'bottom', labels: { font: bodyFont } } }, 
+                  scales: { y: { beginAtZero: true, stacked: true, title: { display: true, text: langData.chart_gov_yaxis, font: bodyFont } }, x: { stacked: true } }
+                }
+              });
+            }
+        }
+
+        updateLanguage();
+        
+        document.addEventListener('click', function initMusic() {
+          if(bgMusic.paused){
+            bgMusic.play().catch(e => console.log("音樂自動播放被瀏覽器阻止。"));
+            musicToggleBtn.innerHTML = '<i class="fas fa-music"></i>';
+          }
+          document.removeEventListener('click', initMusic);
+        });
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>寶島風華：台灣歷史全覽</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      /* --- 字體導入 --- */
+      @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+TC:wght@400;700;900&family=ZCOOL+XiaoWei&family=Zhi+Mang+Xing&display=swap');
+      
+      /* --- 變數定義 (水墨風格) --- */
+      :root {
+        --bg-color: #F8F6F2; /* 宣紙米白 */
+        --primary-color: #4A6C5B; /* 主色 - 淡雅青綠 */
+        --accent-color: #A99A86;  /* 強調色 - 水墨灰/米色 */
+        --accent-light: #E0D8CC;  /* 強調淺色 - 淡米 */
+        --text-color: #3D3D3D;    /* 內文顏色 - 深灰黑 */
+        --title-font: 'Ma Shan Zheng', 'Noto Serif TC', serif;
+        --body-font: 'Noto Serif TC', serif;
+        --cursive-font: 'Zhi Mang Xing', cursive;
+        --elegant-font: 'ZCOOL+XiaoWei', serif;
+      }
+
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        font-family: var(--body-font);
+        font-size: 18px;
+        background-image: url('https://www.transparenttextures.com/patterns/paper.png'); /* 書卷紋理 */
+        overflow-x: hidden;
+      }
+      
+      /* --- 水墨卷轴效果 --- */
+      .silk-scroll-effect {
+        position: relative;
+      }
+      .silk-scroll-effect::before,
+      .silk-scroll-effect::after {
+        content: '';
+        position: absolute;
+        width: 60px;
+        height: 100%;
+        top: 0;
+        z-index: 5;
+        background: linear-gradient(90deg, rgba(248, 246, 242, 0.8), transparent);
+        pointer-events: none;
+      }
+      .silk-scroll-effect::before {
+        left: 0;
+      }
+      .silk-scroll-effect::after {
+        right: 0;
+        transform: rotate(180deg);
+      }
+      
+      /* --- 通用區塊設定 --- */
+      .slide-section {
+        width: 100%;
+        min-height: 100vh;
+        padding: 180px 40px 80px; 
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        max-width: 1600px;
+        margin: 0 auto;
+        border-bottom: 1px solid rgba(74, 108, 91, 0.1);
+      }
+      
+      /* --- 内容承载层 --- */
+      .content-container {
+        background: rgba(248, 246, 242, 0.92);
+        border-radius: 12px;
+        padding: 40px;
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(169, 154, 134, 0.3);
+        position: relative;
+        z-index: 10;
+        width: 90%;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .content-container::before {
+        content: '';
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        border: 2px solid rgba(169, 154, 134, 0.15);
+        border-radius: 8px;
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      /* --- 標題美化 --- */
+      .section-title {
+        font-family: var(--title-font);
+        font-size: 4.5rem;
+        color: var(--primary-color);
+        margin-bottom: 50px;
+        text-align: center;
+        line-height: 1.2;
+        position: relative;
+        padding-bottom: 30px;
+        text-shadow: 3px 3px 6px rgba(0,0,0,0.1);
+        letter-spacing: 2px;
+      }
+      /* 标题装饰线 (水墨筆觸) */
+      .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 200px;
+        height: 10px;
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="10" viewBox="0 0 200 10"><path d="M0,5 C40,2 80,8 120,5 S160,2 200,6" fill="none" stroke="%23A99A86" stroke-width="3" stroke-linecap="round"/></svg>');
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+
+      /* --- 導覽列 --- */
+      .navbar {
+        position: fixed; top: 0; left: 0; width: 100%;
+        background-color: rgba(74, 108, 91, 0.95); /* 青綠色 */
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        z-index: 1000; padding: 15px 20px;
+        transition: all 0.4s ease;
+      }
+      .navbar.scrolled {
+        padding: 10px 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      }
+      .nav-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 5px 15px; } /* 縮小間距 */
+      .nav-links a {
+        color: var(--bg-color); 
+        font-family: var(--elegant-font);
+        font-size: 16px; /* 縮小字體 */
+        padding: 8px 16px; /* 縮小內距 */
+        border-radius: 30px;
+        transition: all 0.4s ease;
+        position: relative;
+        letter-spacing: 1px;
+      }
+      .nav-links a:hover, .nav-links a.active { 
+        background: linear-gradient(135deg, var(--accent-color), #8a7c6a);
+        color: var(--primary-color);
+        transform: translateY(-4px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      }
+      .nav-links a::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 30px;
+        background: linear-gradient(135deg, transparent, rgba(169, 154, 134, 0.3));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      .nav-links a:hover::before {
+        opacity: 1;
+      }
+
+      /* --- 控制面板 --- */
+      .control-panel {
+        position: fixed; top: 120px; right: 30px;
+        display: flex; flex-direction: column; gap: 15px; z-index: 999;
+      }
+      .control-btn {
+        width: 55px; height: 55px;
+        background: linear-gradient(135deg, var(--primary-color), #3a5647);
+        color: var(--accent-color);
+        border: 2px solid var(--accent-color);
+        border-radius: 50%;
+        display: flex; justify-content: center; align-items: center;
+        cursor: pointer; font-size: 22px;
+        transition: all 0.4s ease;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.25);
+      }
+      .control-btn:hover {
+        background: linear-gradient(135deg, var(--accent-color), #8a7c6a);
+        color: var(--primary-color);
+        transform: scale(1.15) rotate(12deg);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      }
+      #to-top-btn { display: none; }
+      
+      /* --- 語音導讀按鈕 --- */
+      .tts-btn { display: inline-block; vertical-align: middle; }
+      .tts-btn.is-playing { background-color: var(--accent-color); color: var(--primary-color); }
+      .tts-btn.is-playing:hover { background-color: #8a7c6a; }
+      .autoplay-active .tts-btn { display: none; }
+      body.tts-active .nav-links a, body.tts-active #to-top-btn { pointer-events: none; opacity: 0.5; cursor: not-allowed; transition: opacity 0.3s ease; }
+
+      /* --- 捲動動畫 --- */
+      .scroll-reveal { opacity: 0; transform: translateY(50px); transition: opacity 1s ease-out, transform 1s ease-out; }
+      .scroll-reveal.visible { opacity: 1; transform: translateY(0); }
+      
+      /* --- 時間軸視覺強化 --- */
+      .visual-timeline { position: relative; width: 100%; max-width: 900px; margin: 50px auto; padding: 20px 0; }
+      .visual-timeline::after { content: ''; position: absolute; width: 8px; background: linear-gradient(to bottom, transparent, var(--accent-color), transparent); top: 0; bottom: 0; left: 50%; margin-left: -4px; z-index: 1; border-radius: 10px; box-shadow: 0 0 15px rgba(169, 154, 134, 0.5); }
+      .timeline-container { padding: 10px 40px; position: relative; background-color: inherit; width: 50%; }
+      .timeline-container.left { left: 0; }
+      .timeline-container.right { left: 50%; }
+      .timeline-container::after { content: ''; position: absolute; width: 35px; height: 35px; right: -17px; background-color: var(--bg-color); border: 4px solid var(--primary-color); top: 25px; border-radius: 50%; z-index: 2; transition: all 0.4s ease; box-shadow: 0 0 0 6px rgba(169, 154, 134, 0.4); }
+      .timeline-container:hover::after { transform: scale(1.4); background-color: var(--accent-color); box-shadow: 0 0 0 8px rgba(169, 154, 134, 0.6); }
+      .timeline-container.right::after { left: -17px; }
+      .timeline-content { padding: 30px 40px; background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(224, 216, 204, 0.4)); position: relative; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 1px solid rgba(74, 108, 91, 0.2); border-left: 10px solid var(--primary-color); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); backdrop-filter: blur(4px); }
+      .timeline-content:hover { transform: translateY(-15px) rotate(1deg); box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
+      .timeline-content h3 { font-size: 26px; color: var(--primary-color); font-family: var(--title-font); margin-bottom: 15px; border-bottom: 2px solid var(--accent-light); padding-bottom: 10px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+      .timeline-content p { font-size: 18px; line-height: 1.8; font-family: var(--elegant-font); }
+
+      /* --- 互動地圖 --- */
+      .map-container-interactive { position: relative; width: 100%; max-width: 600px; border-radius: 15px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 3px solid var(--accent-light); transform: perspective(1000px) rotateX(5deg) rotateY(0deg); transition: transform 0.5s ease; }
+      .map-container-interactive:hover { transform: perspective(1000px) rotateX(2deg) rotateY(2deg); }
+      .hotspot { position: absolute; width: 35px; height: 35px; background: radial-gradient(circle, rgba(169, 154, 134, 0.9), rgba(138, 124, 106, 0.9)); border: 3px solid white; border-radius: 50%; cursor: pointer; transition: all 0.4s ease; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 20px rgba(169, 154, 134, 0.8); animation: pulse 2s infinite; z-index: 10; }
+      @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 10px rgba(169, 154, 134, 0.5); } 50% { transform: scale(1.2); box-shadow: 0 0 30px rgba(169, 154, 134, 1); } 100% { transform: scale(1); box-shadow: 0 0 10px rgba(169, 154, 134, 0.5); } }
+      .hotspot:hover { transform: scale(1.6); background: radial-gradient(circle, var(--primary-color), #3a5647); animation-play-state: paused; z-index: 20; }
+      .hotspot .fa-star { color: white; font-size: 16px; transition: transform 0.3s ease; }
+      .hotspot:hover .fa-star { transform: rotate(360deg); }
+      .info-box { display: none; position: absolute; background: linear-gradient(135deg, rgba(20, 30, 20, 0.95), rgba(30, 45, 35, 0.95)); color: var(--accent-light); padding: 25px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); z-index: 20; width: 280px; border-left: 5px solid var(--accent-color); font-family: var(--elegant-font); backdrop-filter: blur(8px); animation: fadeIn 0.4s ease; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+      .info-box h3 { font-family: var(--title-font); font-size: 24px; color: var(--accent-color); margin-bottom: 15px; border-bottom: 1px solid rgba(169, 154, 134, 0.4); padding-bottom: 10px; }
+      .info-box p { font-size: 17px; line-height: 1.7; }
+
+      /* --- 卡片通用樣式 --- */
+      .styled-card { background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(224, 216, 204, 0.3)); border: 1px solid rgba(169, 154, 134, 0.3); border-radius: 18px; padding: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.12); transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); height: 100%; display: flex; flex-direction: column; overflow: hidden; position: relative; backdrop-filter: blur(4px); }
+      .styled-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, var(--primary-color), var(--accent-color)); }
+      .styled-card:hover { transform: translateY(-20px) rotate(2deg); box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+      
+      /* --- 圖片容器 --- */
+      .image-container-styled { border-radius: 15px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 6px solid var(--accent-color); display: flex; justify-content: center; align-items: center; width: 100%; transition: all 0.5s ease; transform: perspective(1000px) rotateX(5deg); }
+      .image-container-styled:hover { box-shadow: 0 20px 50px rgba(0,0,0,0.4); transform: perspective(1000px) rotateX(2deg); }
+      .image-container-styled img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+      .image-container-styled:hover img { transform: scale(1.1); }
+
+      /* --- 首頁特殊樣式 (已修改) --- */
+      #title { 
+        color: var(--accent-color); 
+        overflow: hidden;
+      }
+      .title-video-container {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        overflow: hidden;
+        z-index: 1;
+      }
+      .title-video-container video {
+        width: 100%; height: 100%;
+        object-fit: cover;
+      }
+      #title::before { /* 影片上的半透明濾鏡 */
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: rgba(20, 30, 20, 0.35);
+        z-index: 2;
+      }
+      #title .border-pattern { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border: 40px solid transparent; border-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><path d="M0,0 L80,0 L80,80 L0,80 Z" fill="none" stroke="%23A99A86" stroke-width="3"/><path d="M20,20 L60,20 L60,60 L20,60 Z" fill="none" stroke="%23A99A86" stroke-width="2" stroke-dasharray="8,8"/></svg>') 40 stretch; pointer-events: none; z-index: 10; }
+      #title h1 { font-family: 'Ma Shan Zheng', cursive; font-size: 7rem; font-weight: 700; margin-bottom: 25px; color: #F8F4E0; text-shadow: 5px 5px 15px rgba(0, 0, 0, 0.9); letter-spacing: 3px; line-height: 1.1; }
+      #title h2 { font-family: var(--elegant-font); font-size: 2.5rem; font-weight: 400; margin-bottom: 50px; color: var(--accent-color); letter-spacing: 3px; text-shadow: 3px 3px 6px rgba(0,0,0,0.7); }
+      .copyright-notice { position: absolute; bottom: 25px; left: 30px; transform: none; font-size: 16px; color: var(--accent-color); background-color: rgba(0, 0, 0, 0.5); padding: 10px 22px; border-radius: 12px; z-index: 30; font-family: var(--elegant-font); letter-spacing: 1px; }
+      .title-content { position: relative; z-index: 20; text-align: center; padding: 60px; max-width: 1400px; margin: 0 auto; }
+      .title-subtitle { font-size: 2rem; margin-top: 40px; font-family: var(--cursive-font); letter-spacing: 2px; text-shadow: 3px 3px 8px rgba(0,0,0,0.8); line-height: 1.7; max-width: 900px; margin: 40px auto 0; }
+
+      /* --- Section Backgrounds & Readability --- */
+      .slide-section { background-size: cover; background-position: center center; background-attachment: fixed; }
+      #overview { background: linear-gradient(rgba(20, 30, 20, 0.25), rgba(20, 30, 20, 0.25)), url('https://www.ali-nsa.net/content/images/static/ali-img-2-md.jpg') center center/cover; }
+      #timeline { background: linear-gradient(rgba(20, 30, 20, 0.25), rgba(20, 30, 20, 0.25)), url('https://dcm.s3.hicloud.net.tw/new/collectionOpen/2021-07-21/a22c6954-bc06-4cd3-8023-12f631b3e8b2/1d3cf484-e211-48f3-b3b6-14524e31bbd3.jpg') center center/cover; }
+      #regimes { background: linear-gradient(rgba(20, 30, 20, 0.25), rgba(20, 30, 20, 0.25)), url('https://www.taiwan.net.tw/att/1/big_scenic_spots/pic_2156_11.jpg') center center/cover; }
+      #relations { background: linear-gradient(rgba(20, 30, 20, 0.25), rgba(20, 30, 20, 0.25)), url('https://d1b8dyiuti31bx.cloudfront.net/NewsPhotos/20250611/47_174454151663.webp') center center/cover; }
+      #economy { background: linear-gradient(rgba(20, 30, 20, 0.25), rgba(20, 30, 20, 0.25)), url('https://live.staticflickr.com/2115/32649392930_c8cbb14e74_b.jpg') center center/cover; }
+      #culture { background: linear-gradient(rgba(20, 30, 20, 0.25), rgba(20, 30, 20, 0.25)), url('https://5mtz55f1.tinifycdn.com/storage/app/uploads/public/67b/712/dd6/67b712dd66579869949648.jpg?resize.method=cover&resize.width=1200&resize.height=800') center center/cover; }
+      #science { background: linear-gradient(rgba(20, 30, 20, 0.25), rgba(20, 30, 20, 0.25)), url('https://img.technews.tw/wp-content/uploads/2019/09/12125241/%E5%9C%96%E4%B8%80-e1568263979891.jpg') center center/cover; }
+      #figures { background: linear-gradient(rgba(20, 30, 20, 0.25), rgba(20, 30, 20, 0.25)), url('https://www.taiwan.net.tw/att/0042164/03.png') center center/cover; }
+      #territory { background: linear-gradient(rgba(20, 30, 20, 0.25), rgba(20, 30, 20, 0.25)), url('https://cdn-smiletaiwan.cw.com.tw/article/202002/article-5e4293f4caafa.jpg') center center/cover; }
+      #media { background: linear-gradient(rgba(20, 30, 20, 0.2), rgba(20, 30, 20, 0.2)), url('https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Taroko_National_Park%2C_Taiwan_-_Qingshui_Cliffs_2.jpg/1920px-Taroko_National_Park%2C_Taiwan_-_Qingshui_Cliffs_2.jpg') center center/cover; }
+      
+      /* 保護卡片內的文字顏色 */
+      .timeline-content, .styled-card, .info-card, .quote-block, .h-96, .h-80 { text-shadow: none; }
+      .timeline-content *, .styled-card *, .info-card *, .quote-block *, .h-96 *, .h-80 * { text-shadow: none; }
+      .timeline-content, .styled-card { color: var(--text-color); }
+      .timeline-content h3, .styled-card .text-green-800, .info-card .text-green-800 { color: var(--primary-color); }
+      .styled-card .text-gray-600 { color: #4b5563; }
+      .styled-card .text-gray-700 { color: #374151; }
+      
+      /* 特定元素調整 */
+      .info-card { background: linear-gradient(145deg, rgba(248, 246, 242, 0.95), rgba(224, 216, 204, 0.4)) !important; backdrop-filter: blur(5px); color: var(--text-color); border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.12); padding: 30px; }
+      .info-card li { color: var(--text-color); }
+      .info-card .text-yellow-600 { color: #8a7c6a; }
+      .info-card .text-green-800 { color: var(--primary-color); }
+      #overview .text-sm, #territory .text-sm, #regimes .text-sm { color: var(--text-color); opacity: 0.85; }
+      .quote-block { background: linear-gradient(135deg, rgba(20, 30, 20, 0.7), rgba(30, 45, 35, 0.7)); border-color: var(--accent-color); border-left: 10px solid var(--accent-color); padding: 35px; border-radius: 15px; max-width: 900px; margin: 50px auto; backdrop-filter: blur(5px); }
+      .quote-block p { color: var(--accent-light); text-shadow: 1px 1px 3px rgba(0,0,0,0.5); }
+      
+      /* 人物卡片樣式 */
+      .figure-card { background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(224, 216, 204, 0.3)); border-radius: 20px; overflow: hidden; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 12px 30px rgba(0,0,0,0.15); position: relative; height: 100%; }
+      .figure-card:hover { transform: translateY(-15px) rotate(1.5deg); box-shadow: 0 20px 45px rgba(0,0,0,0.25); }
+      .figure-img { height: 280px; overflow: hidden; position: relative; }
+      .figure-img img { width: 100%; height: 100%; object-fit: cover; object-position: top; transition: transform 0.6s ease; }
+      .figure-card:hover .figure-img img { transform: scale(1.15); }
+      .figure-content { padding: 25px; }
+      .figure-name { font-family: var(--title-font); font-size: 28px; color: var(--primary-color); margin-bottom: 10px; border-bottom: 2px solid var(--accent-light); padding-bottom: 8px; }
+      .figure-desc { font-family: var(--elegant-font); font-size: 17px; line-height: 1.8; color: var(--text-color); }
+      
+      /* 響應式調整 */
+      @media (max-width: 1280px) {
+        .nav-links { gap: 4px 10px; }
+        .nav-links a { font-size: 14px; padding: 7px 14px; }
+      }
+      @media (max-width: 1024px) {
+        .section-title { font-size: 3.8rem; }
+      }
+      @media (max-width: 768px) {
+        .section-title { font-size: 3.2rem; padding: 0 20px 20px; }
+        .slide-section { padding: 160px 25px 60px; }
+        #title h1 { font-size: 5rem; }
+        #title h2 { font-size: 2rem; }
+        .title-subtitle { font-size: 1.8rem; }
+        .content-container { padding: 30px; }
+        .timeline-container { width: 100%; padding: 10px 30px 10px 60px; left: 0 !important; }
+        .timeline-container::after { left: 25px !important; right: auto !important; }
+        .visual-timeline::after { left: 30px; }
+        .control-panel { top: auto; bottom: 20px; right: 15px; flex-direction: row; }
+        .control-btn { width: 48px; height: 48px; font-size: 20px; }
+      }
+      @media (max-width: 480px) {
+        .section-title { font-size: 2.8rem; }
+        #title h1 { font-size: 4rem; }
+        #title h2 { font-size: 1.8rem; }
+        .title-subtitle { font-size: 1.5rem; margin-top: 50px; }
+        .copyright-notice { font-size: 12px; left: 15px; bottom: 15px; padding: 8px 15px;}
+        .nav-links { gap: 2px 5px; }
+        .nav-links a { font-size: 12px; padding: 6px 10px; }
+        .content-container { padding: 20px; }
+      }
+    </style>
+</head>
+<body class="silk-scroll-effect">
+
+    <!-- 背景音樂播放器 -->
+    <audio id="bg-music"></audio>
+
+    <!-- 導覽列 -->
+    <nav class="navbar">
+      <div class="nav-links">
+        <a href="#title" data-lang-key="nav_home">首頁</a>
+        <a href="#overview" data-lang-key="nav_overview">歷史總覽</a>
+        <a href="#timeline" data-lang-key="nav_timeline">時代年表</a>
+        <a href="#regimes" data-lang-key="nav_regimes">歷代政權</a>
+        <a href="#relations" data-lang-key="nav_relations">兩岸交流</a>
+        <a href="#economy" data-lang-key="nav_economy">經濟發展</a>
+        <a href="#culture" data-lang-key="nav_culture">民俗文化</a>
+        <a href="#science" data-lang-key="nav_science">科技教育</a>
+        <a href="#figures" data-lang-key="nav_figures">重要人物</a>
+        <a href="#territory" data-lang-key="nav_territory">地理鄉土</a>
+        <a href="#media" data-lang-key="nav_media">影音資源</a>
+      </div>
+    </nav>
+
+    <!-- 控制面板 -->
+    <div class="control-panel">
+      <button id="lang-toggle" class="control-btn" title="切換語言 / Language"><i class="fas fa-language"></i></button>
+      <button id="autoplay-toggle" class="control-btn" title="自動播放 / Autoplay"><i class="fas fa-play"></i></button>
+      <button id="fullscreen-toggle" class="control-btn" title="全螢幕 / Fullscreen"><i class="fas fa-expand"></i></button>
+      <button id="music-toggle" class="control-btn" title="背景音樂 / Music"><i class="fas fa-volume-mute"></i></button>
+      <button id="to-top-btn" class="control-btn" title="回到頂部 / Back to Top"><i class="fas fa-arrow-up"></i></button>
+    </div>
+
+    <!-- 主要內容區域 -->
+    <main>
+
+      <!-- 區塊 1: 標題頁 (已修改) -->
+      <section id="title" class="slide-section">
+        <div class="title-video-container">
+            <video autoplay loop muted playsinline src="https://ping763573.github.io/history/06.mp4"></video>
+        </div>
+        <div class="border-pattern"></div>
+        <div class="title-content">
+          <h1 data-lang-key="title_main">寶島風華<br>台灣歷史全覽</h1>
+          <h2 data-lang-key="title_subtitle">從原住文化到現代社會，一脈相承的中華傳統與本土融合</h2>
+          <p class="title-subtitle" data-lang-key="title_presenter">一場關於土地、人民與傳承的歷史畫卷</p>
+        </div>
+        <p class="copyright-notice" data-lang-key="copyright">展示照片與配樂其版權屬原創所有；純分享勿商用。</p>
+      </section>
+
+      <!-- 區塊 2: 歷史總覽 -->
+      <section id="overview" class="slide-section">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="overview_title">歷史總覽</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <div class="flex flex-col lg:flex-row items-center gap-12 mt-8">
+              <div class="lg:w-3/5 scroll-reveal">
+                <p class="text-xl leading-loose mb-6" data-lang-key="overview_p1">台灣，位於中國東南沿海的寶島，地理位置優越，自古即為東西航線要衝。其歷史是一部多元文化交織、與中華文明緊密相連的壯麗史詩。</p>
+                <p class="text-xl leading-loose" data-lang-key="overview_p2">從史前原住民的純樸生活，到明清時期漢族先民渡海來台，篳路藍縷，開疆拓土，帶來了先進的農耕技術與儒家文化，奠定了今日台灣社會的根基。</p>
+                <div class="info-card border-l-4 border-green-800 p-6 mt-8 rounded-lg">
+                  <h3 class="font-bold text-2xl text-green-800 mb-4" data-lang-key="overview_key_title">核心脈絡</h3>
+                  <ul class="list-none p-0 space-y-3">
+                    <li class="text-lg flex items-start"><i class="fas fa-water text-yellow-600 mr-3 mt-1"></i><span data-lang-key="overview_key_1">史前文化與南島語族</span></li>
+                    <li class="text-lg flex items-start"><i class="fas fa-anchor text-yellow-600 mr-3 mt-1"></i><span data-lang-key="overview_key_2">大航海時代的國際競逐</span></li>
+                    <li class="text-lg flex items-start"><i class="fas fa-book-reader text-yellow-600 mr-3 mt-1"></i><span data-lang-key="overview_key_3">明鄭與清朝時期的開拓與治理</span></li>
+                    <li class="text-lg flex items-start"><i class="fas fa-building text-yellow-600 mr-3 mt-1"></i><span data-lang-key="overview_key_4">日治時期的近代化建設</span></li>
+                    <li class="text-lg flex items-start"><i class="fas fa-flag text-yellow-600 mr-3 mt-1"></i><span data-lang-key="overview_key_5">光復後在中華文化基礎上的發展</span></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="lg:w-2/5 scroll-reveal" style="transition-delay: 0.2s;">
+                <div class="image-container-styled h-full">
+                  <img src="https://photo.travelking.com.tw/scenery/2F43B3A0-1495-4B96-A961-C08350DAF43F_e.jpg" alt="澎湖七美雙心石滬" onerror="this.onerror=null;this.src='https://placehold.co/600x800?text=澎湖石滬'">
+                </div>
+                <p class="text-sm italic mt-3 text-right" data-lang-key="overview_img_caption">澎湖雙心石滬，見證了先民順應自然的智慧與開拓精神。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 3: 時代年表 -->
+      <section id="timeline" class="slide-section">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="timeline_title">時代年表</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <div class="visual-timeline">
+              <div class="timeline-container left scroll-reveal"><div class="timeline-content"><h3 data-lang-key="timeline_1_title">史前-1624: 原住時期</h3><p data-lang-key="timeline_1_desc">島上為南島語系原住民族的家園，發展出多樣的史前文化，如大坌坑文化、卑南文化等，展現與自然和諧共存的生活方式。</p></div></div>
+              <div class="timeline-container right scroll-reveal"><div class="timeline-content"><h3 data-lang-key="timeline_2_title">1624-1683: 荷西與明鄭</h3><p data-lang-key="timeline_2_desc">荷蘭與西班牙人相繼登島，建立貿易據點。1662年，鄭成功驅逐荷蘭人，建立明鄭政權，開啟漢人有規模的系統性治理。</p></div></div>
+              <div class="timeline-container left scroll-reveal"><div class="timeline-content"><h3 data-lang-key="timeline_3_title">1683-1895: 清朝治理</h3><p data-lang-key="timeline_3_desc">清廷將台灣納入版圖，設立府縣，大量漢人移民來台，進行大規模土地開墾，奠定漢人社會主體，並於1885年建省。</p></div></div>
+              <div class="timeline-container right scroll-reveal"><div class="timeline-content"><h3 data-lang-key="timeline_4_title">1895-1945: 日治時期</h3><p data-lang-key="timeline_4_desc">甲午戰後，台灣割讓予日本。日本殖民統治期間，進行了戶籍、土地、交通等近代化基礎建設，對台灣社會影響深遠。</p></div></div>
+              <div class="timeline-container left scroll-reveal"><div class="timeline-content"><h3 data-lang-key="timeline_5_title">1945至今: 光復後發展</h3><p data-lang-key="timeline_5_desc">二戰後台灣光復，回歸中華民國。1949年中央政府遷台，在「一中原則」的基礎上，推行土地改革與經濟建設，創造了舉世矚目的經濟奇蹟。</p></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 4: 歷代政權與治理 (已修改) -->
+      <section id="regimes" class="slide-section">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="regimes_title">歷代政權與治理</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-4">
+              <div class="styled-card scroll-reveal">
+                <div class="image-container-styled mb-4" style="height: 200px;"><img src="https://102clps60429.weebly.com/uploads/2/4/6/2/24620689/4623531.jpg" alt="荷西時期"></div>
+                <div class="border-b-2 border-yellow-500 pb-2 mb-3"><div class="text-3xl font-bold text-green-800" data-lang-key="regime_1_name" style="font-family: var(--title-font);">荷西時期</div><div class="text-gray-600" data-lang-key="regime_1_reign">1624-1662</div></div>
+                <ul class="list-disc list-inside text-gray-700 space-y-2"><li data-lang-key="regime_1_feat1">建立貿易殖民據點</li><li data-lang-key="regime_1_feat2">引進新作物與宗教</li><li data-lang-key="regime_1_feat3">與原住民及漢人互動</li></ul>
+              </div>
+              <div class="styled-card scroll-reveal" style="transition-delay: 0.1s;">
+                <div class="image-container-styled mb-4" style="height: 200px;"><img src="https://g.udn.com.tw/upfiles/B_TW/twrc6688/PSN_PHOTO/464/f_10722464_1.jpg" alt="明鄭時期"></div>
+                <div class="border-b-2 border-yellow-500 pb-2 mb-3"><div class="text-3xl font-bold text-green-800" data-lang-key="regime_2_name" style="font-family: var(--title-font);">明鄭時期</div><div class="text-gray-600" data-lang-key="regime_2_reign">1662-1683</div></div>
+                <ul class="list-disc list-inside text-gray-700 space-y-2"><li data-lang-key="regime_2_feat1">首個漢人政權</li><li data-lang-key="regime_2_feat2">建立孔廟，傳承儒學</li><li data-lang-key="regime_2_feat3">屯田制度，開拓土地</li></ul>
+              </div>
+              <div class="styled-card scroll-reveal" style="transition-delay: 0.2s;">
+                <div class="image-container-styled mb-4" style="height: 200px;"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/1895Tamsui.jpg/250px-1895Tamsui.jpg" alt="清朝時期"></div>
+                <div class="border-b-2 border-yellow-500 pb-2 mb-3"><div class="text-3xl font-bold text-green-800" data-lang-key="regime_3_name" style="font-family: var(--title-font);">清朝治理</div><div class="text-gray-600" data-lang-key="regime_3_reign">1683-1895</div></div>
+                <ul class="list-disc list-inside text-gray-700 space-y-2"><li data-lang-key="regime_3_feat1">納入中國版圖</li><li data-lang-key="regime_3_feat2">設府、縣，行政體系化</li><li data-lang-key="regime_3_feat3">劉銘傳推行近代化</li></ul>
+              </div>
+              <div class="styled-card scroll-reveal" style="transition-delay: 0.3s;">
+                <div class="image-container-styled mb-4" style="height: 200px;"><img src="https://www.post.gov.tw/post/FileCenter/post_ww2/stamp_pic/stamp_bpic/B353_01.1.jpg" alt="中華民國時期"></div>
+                <div class="border-b-2 border-yellow-500 pb-2 mb-3"><div class="text-3xl font-bold text-green-800" data-lang-key="regime_4_name" style="font-family: var(--title-font);">中華民國</div><div class="text-gray-600" data-lang-key="regime_4_reign">1945至今</div></div>
+                <ul class="list-disc list-inside text-gray-700 space-y-2"><li data-lang-key="regime_4_feat1">台灣光復回歸</li><li data-lang-key="regime_4_feat2">實施地方自治</li><li data-lang-key="regime_4_feat3">傳承與發展中華文化</li></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 區塊 5: 對外關係與兩岸交流 -->
+      <section id="relations" class="slide-section">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="relations_title">對外關係與兩岸交流</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <p class="text-center text-xl max-w-4xl mx-auto mb-12 scroll-reveal leading-relaxed" data-lang-key="relations_intro">台灣的歷史與大陸始終血脈相連。從早期漢人渡海拓殖，到清政府設府建制，再到近代國共內戰後的兩岸分治，海峽兩岸的互動是台灣歷史的主軸。雙方共同的文化根源與歷史記憶，是維繫民族情感、在一中框架下尋求和平發展的基石。</p>
+            <div class="flex flex-col lg:flex-row items-center gap-12 mt-8">
+                <div class="lg:w-1/2 flex flex-col gap-8">
+                  <div class="styled-card scroll-reveal">
+                    <h3 class="text-2xl text-green-800 mb-3 flex items-center font-bold"><i class="fas fa-people-carry mr-4 text-yellow-600 text-3xl"></i><span data-lang-key="relations_box1_title">唐宋元明：漢人渡海</span></h3>
+                    <p class="leading-relaxed" data-lang-key="relations_box1_desc">自唐宋以來，閩粵沿海居民開始遷徙至澎湖及台灣，帶來了大陸先進的生產技術與生活方式，與原住民文化逐漸融合。</p>
+                  </div>
+                  <div class="styled-card scroll-reveal" style="transition-delay: 0.1s;">
+                    <h3 class="text-2xl text-green-800 mb-3 flex items-center font-bold"><i class="fas fa-landmark mr-4 text-yellow-600 text-3xl"></i><span data-lang-key="relations_box2_title">清朝治理：制度與文化一體</span></h3>
+                    <p class="leading-relaxed" data-lang-key="relations_box2_desc">清朝將台灣納入行政體系，推行與大陸一致的科舉、官制與賦稅，儒家思想、宗族制度與民間信仰在台落地生根，深化了兩岸的文化認同。</p>
+                  </div>
+                </div>
+                <div class="lg:w-1/2 scroll-reveal" style="transition-delay: 0.2s;">
+                    <div class="styled-card">
+                        <h3 class="text-2xl text-green-800 mb-3 flex items-center font-bold"><i class="fas fa-hands-helping mr-4 text-yellow-600 text-3xl"></i><span data-lang-key="relations_box3_title">現當代：分治與交流</span></h3>
+                        <p class="leading-relaxed" data-lang-key="relations_box3_desc">1949年後，兩岸雖處於分治狀態，但血濃於水的同胞情誼無法割斷。隨著改革開放，兩岸在經貿、文化、民間等層面的交流日益頻繁，為共同的民族未來奠定了基礎。</p>
+                    </div>
+                </div>
+              </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 6: 經濟與社會發展 -->
+      <section id="economy" class="slide-section">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="economy_title">經濟與社會發展</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <div class="flex flex-col lg:flex-row items-center gap-12 mt-8">
+              <div class="lg:w-1/2 scroll-reveal">
+                <div class="h-96 w-full p-4 bg-white/80 rounded-lg shadow-inner">
+                  <canvas id="economyChart"></canvas>
+                </div>
+                <p class="text-center mt-4 text-sm" data-lang-key="economy_chart_caption">圖表顯示台灣產業結構的轉變歷程。</p>
+              </div>
+              <div class="lg:w-1/2 flex flex-col gap-8 scroll-reveal" style="transition-delay: 0.2s;">
+                <div class="styled-card">
+                  <h3 class="text-2xl text-green-800 mb-3 flex items-center font-bold"><i class="fas fa-leaf mr-4 text-yellow-600 text-3xl"></i><span data-lang-key="economy_box1_title">農業社會：以農為本</span></h3>
+                  <p class="leading-relaxed" data-lang-key="economy_box1_desc">清領時期至日治前期，台灣是以稻米、蔗糖為主的農業社會。土地是財富的根基，形成了緊密的農村宗族社群。</p>
+                </div>
+                <div class="styled-card">
+                  <h3 class="text-2xl text-green-800 mb-3 flex items-center font-bold"><i class="fas fa-industry mr-4 text-yellow-600 text-3xl"></i><span data-lang-key="economy_box2_title">工業轉型：從加工到創造</span></h3>
+                  <p class="leading-relaxed" data-lang-key="economy_box2_desc">光復後，從進口替代、加工出口到十大建設，台灣逐步建立起完整的工業體系，中小企業的活力成為經濟發展的重要推力。</p>
+                </div>
+                <div class="styled-card">
+                  <h3 class="text-2xl text-green-800 mb-3 flex items-center font-bold"><i class="fas fa-microchip mr-4 text-yellow-600 text-3xl"></i><span data-lang-key="economy_box3_title">科技島：晶片與未來</span></h3>
+                  <p class="leading-relaxed" data-lang-key="economy_box3_desc">1980年代起，台灣憑藉人才與政策優勢，發展高科技產業，特別是半導體晶圓代工，在全球供應鏈中佔據關鍵地位。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 7: 民俗與文化傳承 -->
+      <section id="culture" class="slide-section">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="culture_title">民俗與文化傳承</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <p class="text-center text-xl max-w-4xl mx-auto mb-12 scroll-reveal leading-relaxed" data-lang-key="culture_intro">台灣的文化是中華文化的延續與昇華，融合了閩南、客家、原住民及戰後各省市的多元特色，形成了敬天法祖、兼容並蓄的獨特風貌。</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              <div class="styled-card flex flex-col md:flex-row bg-white overflow-hidden scroll-reveal">
+                <div class="image-container-styled md:w-1/3 flex-shrink-0"><img src="https://imgs.gvm.com.tw/upload/gallery/20230420/138765.jpg" alt="媽祖遶境"></div>
+                <div class="p-5 flex flex-col justify-center flex-grow">
+                  <h3 class="text-2xl text-green-800 font-bold mb-3 flex items-center"><i class="fas fa-praying-hands mr-3 text-yellow-600"></i><span data-lang-key="culture_card1_title">民間信仰與節慶</span></h3>
+                  <p data-lang-key="culture_card1_desc">以媽祖、王爺、關公等信仰為核心的廟宇遍布全台，媽祖遶境、燒王船等活動不僅是宗教儀式，更是凝聚社群情感的重要文化資產。</p>
+                </div>
+              </div>
+              <div class="styled-card flex flex-col md:flex-row bg-white overflow-hidden scroll-reveal" style="transition-delay: 0.1s;">
+                <div class="image-container-styled md:w-1/3 flex-shrink-0"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTmdc_2CXt4FiHCwrRtXfWR-x94FnwmbLg60A&s" alt="歌仔戲"></div>
+                <div class="p-5 flex flex-col justify-center flex-grow">
+                  <h3 class="text-2xl text-green-800 font-bold mb-3 flex items-center"><i class="fas fa-theater-masks mr-3 text-yellow-600"></i><span data-lang-key="culture_card2_title">傳統藝術與生活</span></h3>
+                  <p data-lang-key="culture_card2_desc">歌仔戲、布袋戲等傳統戲曲源於閩南，在台灣發揚光大。飲食文化上，從辦桌到夜市小吃，無不體現著濃厚的鄉土人情與中華烹飪的傳承。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 8: 科技與教育演進 -->
+      <section id="science" class="slide-section">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="science_title">科技與教育演進</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <div class="flex flex-col lg:flex-row-reverse items-center gap-12 mt-8">
+                <div class="lg:w-1/2 scroll-reveal">
+                    <div class="h-96 w-full p-4 bg-white/80 rounded-lg shadow-inner">
+                      <canvas id="scienceChart"></canvas>
+                    </div>
+                    <p class="text-center mt-4 text-sm" data-lang-key="science_chart_caption">圖表顯示台灣高等教育普及率與科技產業出口值的增長趨勢。</p>
+                </div>
+                <div class="lg:w-1/2 flex flex-col gap-8 scroll-reveal" style="transition-delay: 0.2s;">
+                    <div class="styled-card">
+                      <h3 class="text-2xl text-green-800 mb-3 flex items-center font-bold"><i class="fas fa-school mr-4 text-yellow-600 text-3xl"></i><span data-lang-key="science_box1_title">教育普及：百年樹人</span></h3>
+                      <p class="leading-relaxed" data-lang-key="science_box1_desc">從清領時期的書院、日治的公學校，到光復後推行九年國民義務教育與廣設大學，教育的普及為台灣培育了大量高素質人才。</p>
+                    </div>
+                    <div class="styled-card">
+                      <h3 class="text-2xl text-green-800 mb-3 flex items-center font-bold"><i class="fas fa-brain mr-4 text-yellow-600 text-3xl"></i><span data-lang-key="science_box2_title">科技創新：產學研合作</span></h3>
+                      <p class="leading-relaxed" data-lang-key="science_box2_desc">透過設立工業技術研究院、科學園區等機構，台灣成功將學術研究成果轉化為產業動力，形成了緊密的產學研合作體系，奠定科技發展的基石。</p>
+                    </div>
+                </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 9: 重要人物介紹 -->
+      <section id="figures" class="slide-section">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="figures_title">重要歷史人物</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <p class="text-center text-xl max-w-4xl mx-auto mb-12 scroll-reveal leading-relaxed" data-lang-key="figures_intro">在台灣的歷史長河中，無數英雄豪傑、文人志士以其智慧與奉獻，共同塑造了這片土地的樣貌。</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div class="figure-card scroll-reveal">
+                <div class="figure-img"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTfmDzJCNzSHdNXh_NzW0Sr30LB2jO0_Hrw9A&s" alt="鄭成功"></div>
+                <div class="figure-content"><h3 class="figure-name" data-lang-key="figure_1_name">鄭成功</h3><p class="figure-desc" data-lang-key="figure_1_desc">明末將領，驅逐荷蘭人，以台灣為反清復明基地。他不僅是軍事英雄，更將明朝典章制度引入台灣，被尊為「開台聖王」。</p></div>
+              </div>
+              <div class="figure-card scroll-reveal" style="transition-delay: 0.1s;">
+                <div class="figure-img"><img src="https://storystudio.tw/storage/upload/article/coverPhoto_20240504154445_HOT.jpg" alt="劉銘傳"></div>
+                <div class="figure-content"><h3 class="figure-name" data-lang-key="figure_2_name">劉銘傳</h3><p class="figure-desc" data-lang-key="figure_2_desc">清末台灣首任巡撫，在台期間推行洋務運動，鋪設鐵路、開辦郵政、發展煤礦，為台灣的近代化奠定重要基礎。</p></div>
+              </div>
+              <div class="figure-card scroll-reveal" style="transition-delay: 0.2s;">
+                <div class="figure-img"><img src="https://www.thinkingtaiwan.com/sites/default/files/images/insert/policy/chiang_kai_shek.jpg" alt="蔣中正"></div>
+                <div class="figure-content"><h3 class="figure-name" data-lang-key="figure_3_name">蔣中正</h3><p class="figure-desc" data-lang-key="figure_3_desc">中華民國領導人，1949年率領政府遷台。在台期間，推行土地改革，穩定社會，堅持反共與中華文化復興，奠定台灣發展基礎。</p></div>
+              </div>
+              <div class="figure-card scroll-reveal" style="transition-delay: 0.3s;">
+                <div class="figure-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/ChiangChingkuo_photo.jpg/250px-ChiangChingkuo_photo.jpg" alt="蔣經國"></div>
+                <div class="figure-content"><h3 class="figure-name" data-lang-key="figure_4_name">蔣經國</h3><p class="figure-desc" data-lang-key="figure_4_desc">中華民國領導人，推動十大建設，促進經濟騰飛。晚年開啟重大政治革新，開放黨禁、報禁及兩岸探親，對台灣貢獻卓著。</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 10: 地理變遷與鄉土認識 -->
+      <section id="territory" class="slide-section">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="territory_title">地理變遷與鄉土認識</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <div class="flex flex-col lg:flex-row items-center gap-12 mt-8">
+              <div class="lg:w-3/5 scroll-reveal">
+                <div class="map-container-interactive mx-auto image-container-styled">
+                  <img src="https://s.eslite.com/Upload/Product/201907/o/636985171083638750.jpg" alt="Map of Taiwan" onerror="this.onerror=null;this.src='https://placehold.co/600x800?text=台灣地圖'">
+                  <div class="hotspot" style="top: 55%; left: 18%;" data-target="info-tainan"><i class="fas fa-star"></i></div>
+                  <div class="hotspot" style="top: 20%; left: 30%;" data-target="info-taipei"><i class="fas fa-star"></i></div>
+                  <div class="hotspot" style="top: 70%; left: 35%;" data-target="info-kaohsiung"><i class="fas fa-star"></i></div>
+                  <div class="hotspot" style="top: 65%; left: 80%;" data-target="info-beinan"><i class="fas fa-star"></i></div>
+                  <div id="info-tainan" class="info-box" style="top: 45%; left: 25%;"><h3 data-lang-key="map_tainan_title">府城 (台南)</h3><p data-lang-key="map_tainan_desc">台灣最早開發的地區，曾為明鄭首都及清代台灣府治。古蹟林立，文化底蘊深厚，有「台灣京都」之稱。</p></div>
+                  <div id="info-taipei" class="info-box" style="top: 10%; left: 40%;"><h3 data-lang-key="map_taipei_title">台北 (艋舺/大稻埕)</h3><p data-lang-key="map_taipei_desc">清末因茶葉貿易興起，劉銘傳在此建立省城。日治時期至今，一直是台灣的政治與經濟中心。</p></div>
+                  <div id="info-kaohsiung" class="info-box" style="top: 60%; left: 5%;"><h3 data-lang-key="map_kaohsiung_title">打狗 (高雄)</h3><p data-lang-key="map_kaohsiung_desc">昔日為漁村，日治時期築港後成為重工業基地。現為台灣南部最重要的國際港口與工業城市。</p></div>
+                  <div id="info-beinan" class="info-box" style="top: 55%; left: 50%;"><h3 data-lang-key="map_beinan_title">卑南 (台東)</h3><p data-lang-key="map_beinan_desc">擁有世界聞名的卑南遺址，是太平洋沿岸規模最大的石板棺墓葬群，展現了台灣史前文化的輝煌成就。</p></div>
+                </div>
+                <p class="text-sm italic mt-3 text-center" data-lang-key="territory_map_caption">點擊地圖上的<i class="fas fa-star text-yellow-500"></i>圖標，探索台灣各地的歷史故事。</p>
+              </div>
+              <div class="lg:w-2/5 scroll-reveal" style="transition-delay: 0.2s;">
+                <p class="text-xl leading-loose mb-6" data-lang-key="territory_p1">台灣的開發史是由西向東、由南至北的過程。平原地區最早由漢人開墾，形成聚落；山區則長期是原住民族的活動領域。每一寸土地，都承載著族群互動與時代變遷的記憶。</p>
+                <div class="quote-block p-6 rounded-lg">
+                  <p class="text-xl italic leading-relaxed" data-lang-key="territory_quote">"認識台灣，必先認識這片土地。地理形塑了歷史，歷史賦予了土地靈魂。"</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 11: 影音與圖像資源 -->
+      <section id="media" class="slide-section">
+        <div class="w-full">
+          <div class="content-container">
+            <h2 class="section-title scroll-reveal" data-lang-key="media_title">影音與圖像資源</h2><button class="tts-btn ml-4 px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600" data-tts-target data-lang-key="tts_play_btn">🔊 語音導讀</button>
+            <div class="scroll-reveal my-8" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; border-radius: 15px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 3px solid var(--accent-light);">
+              <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="https://www.youtube.com/embed/QPIQ7imbbG4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <p class="text-xl leading-loose max-w-4xl mx-auto mt-10 scroll-reveal" data-lang-key="media_desc">
+                透過影像，我們能更直觀地感受台灣歷史的脈動。此處精選了「看見台灣」紀錄片預告，以空拍視角，帶您飛越這片我們深愛的土地，見證它的美麗與哀愁，感受人與土地之間密不可分的關係。歷史不僅是文字的記載，更是真實發生在這片山川河海間的動人故事。
+            </p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <script>
+    // --- 翻譯資料 ---
+    const translations = {
+      'zh-TW': {
+        nav_home: '首頁', nav_overview: '歷史總覽', nav_timeline: '時代年表', nav_regimes: '歷代政權', nav_relations: '兩岸交流', nav_economy: '經濟發展', nav_culture: '民俗文化', nav_science: '科技教育', nav_figures: '重要人物', nav_territory: '地理鄉土', nav_media: '影音資源',
+        title_main: '寶島風華<br>台灣歷史全覽', title_subtitle: '從原住文化到現代社會，一脈相承的中華傳統與本土融合', title_presenter: '一場關於土地、人民與傳承的歷史畫卷',
+        copyright: '展示照片與配樂其版權屬原創所有；純分享勿商用。',
+        tts_play_btn: '🔊 語音導讀', tts_stop_btn: '⏹️ 停止導讀',
+        
+        overview_title: '歷史總覽',
+        overview_p1: '台灣，位於中國東南沿海的寶島，地理位置優越，自古即為東西航線要衝。其歷史是一部多元文化交織、與中華文明緊密相連的壯麗史詩。',
+        overview_p2: '從史前原住民的純樸生活，到明清時期漢族先民渡海來台，篳路藍縷，開疆拓土，帶來了先進的農耕技術與儒家文化，奠定了今日台灣社會的根基。',
+        overview_key_title: '核心脈絡',
+        overview_key_1: '史前文化與南島語族', overview_key_2: '大航海時代的國際競逐', overview_key_3: '明鄭與清朝時期的開拓與治理', overview_key_4: '日治時期的近代化建設', overview_key_5: '光復後在中華文化基礎上的發展',
+        overview_img_caption: '澎湖雙心石滬，見證了先民順應自然的智慧與開拓精神。',
+
+        timeline_title: '時代年表',
+        timeline_1_title: '史前-1624: 原住時期', timeline_1_desc: '島上為南島語系原住民族的家園，發展出多樣的史前文化，如大坌坑文化、卑南文化等，展現與自然和諧共存的生活方式。',
+        timeline_2_title: '1624-1683: 荷西與明鄭', timeline_2_desc: '荷蘭與西班牙人相繼登島，建立貿易據點。1662年，鄭成功驅逐荷蘭人，建立明鄭政權，開啟漢人有規模的系統性治理。',
+        timeline_3_title: '1683-1895: 清朝治理', timeline_3_desc: '清廷將台灣納入版圖，設立府縣，大量漢人移民來台，進行大規模土地開墾，奠定漢人社會主體，並於1885年建省。',
+        timeline_4_title: '1895-1945: 日治時期', timeline_4_desc: '甲午戰後，台灣割讓予日本。日本殖民統治期間，進行了戶籍、土地、交通等近代化基礎建設，對台灣社會影響深遠。',
+        timeline_5_title: '1945至今: 光復後發展', timeline_5_desc: '二戰後台灣光復，回歸中華民國。1949年中央政府遷台，在「一中原則」的基礎上，推行土地改革與經濟建設，創造了舉世矚目的經濟奇蹟。',
+
+        regimes_title: '歷代政權與治理',
+        regime_1_name: '荷西時期', regime_1_reign: '1624-1662', regime_1_feat1: '建立貿易殖民據點', regime_1_feat2: '引進新作物與宗教', regime_1_feat3: '與原住民及漢人互動',
+        regime_2_name: '明鄭時期', regime_2_reign: '1662-1683', regime_2_feat1: '首個漢人政權', regime_2_feat2: '建立孔廟，傳承儒學', regime_2_feat3: '屯田制度，開拓土地',
+        regime_3_name: '清朝治理', regime_3_reign: '1683-1895', regime_3_feat1: '納入中國版圖', regime_3_feat2: '設府、縣，行政體系化', regime_3_feat3: '劉銘傳推行近代化',
+        regime_4_name: '中華民國', regime_4_reign: '1945至今', regime_4_feat1: '台灣光復回歸', regime_4_feat2: '實施地方自治', regime_4_feat3: '傳承與發展中華文化',
+
+        relations_title: '對外關係與兩岸交流',
+        relations_intro: '台灣的歷史與大陸始終血脈相連。從早期漢人渡海拓殖，到清政府設府建制，再到近代國共內戰後的兩岸分治，海峽兩岸的互動是台灣歷史的主軸。雙方共同的文化根源與歷史記憶，是維繫民族情感、在一中框架下尋求和平發展的基石。',
+        relations_box1_title: '唐宋元明：漢人渡海', relations_box1_desc: '自唐宋以來，閩粵沿海居民開始遷徙至澎湖及台灣，帶來了大陸先進的生產技術與生活方式，與原住民文化逐漸融合。',
+        relations_box2_title: '清朝治理：制度與文化一體', relations_box2_desc: '清朝將台灣納入行政體系，推行與大陸一致的科舉、官制與賦稅，儒家思想、宗族制度與民間信仰在台落地生根，深化了兩岸的文化認同。',
+        relations_box3_title: '現當代：分治與交流', relations_box3_desc: '1949年後，兩岸雖處於分治狀態，但血濃於水的同胞情誼無法割斷。隨著改革開放，兩岸在經貿、文化、民間等層面的交流日益頻繁，為共同的民族未來奠定了基礎。',
+
+        economy_title: '經濟與社會發展',
+        economy_chart_caption: '圖表顯示台灣產業結構的轉變歷程。',
+        economy_box1_title: '農業社會：以農為本', economy_box1_desc: '清領時期至日治前期，台灣是以稻米、蔗糖為主的農業社會。土地是財富的根基，形成了緊密的農村宗族社群。',
+        economy_box2_title: '工業轉型：從加工到創造', economy_box2_desc: '光復後，從進口替代、加工出口到十大建設，台灣逐步建立起完整的工業體系，中小企業的活力成為經濟發展的重要推力。',
+        economy_box3_title: '科技島：晶片與未來', economy_box3_desc: '1980年代起，台灣憑藉人才與政策優勢，發展高科技產業，特別是半導體晶圓代工，在全球供應鏈中佔據關鍵地位。',
+
+        culture_title: '民俗與文化傳承',
+        culture_intro: '台灣的文化是中華文化的延續與昇華，融合了閩南、客家、原住民及戰後各省市的多元特色，形成了敬天法祖、兼容並蓄的獨特風貌。',
+        culture_card1_title: '民間信仰與節慶', culture_card1_desc: '以媽祖、王爺、關公等信仰為核心的廟宇遍布全台，媽祖遶境、燒王船等活動不僅是宗教儀式，更是凝聚社群情感的重要文化資產。',
+        culture_card2_title: '傳統藝術與生活', culture_card2_desc: '歌仔戲、布袋戲等傳統戲曲源於閩南，在台灣發揚光大。飲食文化上，從辦桌到夜市小吃，無不體現著濃厚的鄉土人情與中華烹飪的傳承。',
+
+        science_title: '科技與教育演進',
+        science_chart_caption: '圖表顯示台灣高等教育普及率與科技產業出口值的增長趨勢。',
+        science_box1_title: '教育普及：百年樹人', science_box1_desc: '從清領時期的書院、日治的公學校，到光復後推行九年國民義務教育與廣設大學，教育の普及為台灣培育了大量高素質人才。',
+        science_box2_title: '科技創新：產學研合作', science_box2_desc: '透過設立工業技術研究院、科學園區等機構，台灣成功將學術研究成果轉化為產業動力，形成了緊密的產學研合作體系，奠定科技發展的基石。',
+
+        figures_title: '重要歷史人物',
+        figures_intro: '在台灣的歷史長河中，無數英雄豪傑、文人志士以其智慧與奉獻，共同塑造了這片土地的樣貌。',
+        figure_1_name: '鄭成功', figure_1_desc: '明末將領，驅逐荷蘭人，以台灣為反清復明基地。他不僅是軍事英雄，更將明朝典章制度引入台灣，被尊為「開台聖王」。',
+        figure_2_name: '劉銘傳', figure_2_desc: '清末台灣首任巡撫，在台期間推行洋務運動，鋪設鐵路、開辦郵政、發展煤礦，為台灣的近代化奠定重要基礎。',
+        figure_3_name: '蔣中正', figure_3_desc: '中華民國領導人，1949年率領政府遷台。在台期間，推行土地改革，穩定社會，堅持反共與中華文化復興，奠定台灣發展基礎。',
+        figure_4_name: '蔣經國', figure_4_desc: '中華民國領導人，推動十大建設，促進經濟騰飛。晚年開啟重大政治革新，開放黨禁、報禁及兩岸探親，對台灣貢獻卓著。',
+
+        territory_title: '地理變遷與鄉土認識',
+        territory_map_caption: '點擊地圖上的<i class="fas fa-star text-yellow-500"></i>圖標，探索台灣各地的歷史故事。',
+        territory_p1: '台灣的開發史是由西向東、由南至北的過程。平原地區最早由漢人開墾，形成聚落；山區則長期是原住民族的活動領域。每一寸土地，都承載着族群互動與時代變遷的記憶。',
+        territory_quote: '"認識台灣，必先認識這片土地。地理形塑了歷史，歷史賦予了土地靈魂。"',
+        map_tainan_title: '府城 (台南)', map_tainan_desc: '台灣最早開發的地區，曾為明鄭首都及清代台灣府治。古蹟林立，文化底蘊深厚，有「台灣京都」之稱。',
+        map_taipei_title: '台北 (艋舺/大稻埕)', map_taipei_desc: '清末因茶葉貿易興起，劉銘傳在此建立省城。日治時期至今，一直是台灣的政治與經濟中心。',
+        map_kaohsiung_title: '打狗 (高雄)', map_kaohsiung_desc: '昔日為漁村，日治時期築港後成為重工業基地。現為台灣南部最重要的國際港口與工業城市。',
+        map_beinan_title: '卑南 (台東)', map_beinan_desc: '擁有世界聞名的卑南遺址，是太平洋沿岸規模最大的石板棺墓葬群，展現了台灣史前文化的輝煌成就。',
+
+        media_title: '影音與圖像資源',
+        media_desc: '透過影像，我們能更直觀地感受台灣歷史的脈動。此處精選了「看見台灣」紀錄片預告，以空拍視角，帶您飛越這片我們深愛的土地，見證它的美麗與哀愁，感受人與土地之間密不可分的關係。歷史不僅是文字的記載，更是真實發生在這片山川河海間的動人故事。',
+
+        chart_economy_title: '台灣產業結構變遷',
+        chart_economy_labels: ['1952年', '1981年', '2021年'],
+        chart_economy_agri: '農業', chart_economy_ind: '工業', chart_economy_ser: '服務業',
+        
+        chart_science_title: '教育與科技發展指標',
+        chart_science_labels: ['1970', '1990', '2010', '2020'],
+        chart_science_edu: '高等教育入學率 (%)', chart_science_tech: '科技出口佔比 (%)',
+      },
+      'en': {
+        nav_home: 'Home', nav_overview: 'Overview', nav_timeline: 'Timeline', nav_regimes: 'Regimes', nav_relations: 'Cross-Strait', nav_economy: 'Economy', nav_culture: 'Culture', nav_science: 'Sci & Edu', nav_figures: 'Figures', nav_territory: 'Geography', nav_media: 'Media',
+        title_main: 'The Splendor of Formosa<br>A Tour of Taiwan History', title_subtitle: 'From Indigenous Cultures to a Modern Society, a Fusion of Chinese Tradition and Local Identity', title_presenter: 'A Historical Scroll of Land, People, and Heritage',
+        copyright: 'Copyright of photos and music belongs to original creators. For sharing only, not for commercial use.',
+        tts_play_btn: '🔊 Read Aloud', tts_stop_btn: '⏹️ Stop Reading',
+
+        overview_title: 'Historical Overview',
+        overview_p1: 'Taiwan, a beautiful island off the southeastern coast of China, holds a strategic position on East-West sea routes. Its history is a magnificent epic interwoven with diverse cultures and closely linked to Chinese civilization.',
+        overview_p2: 'From the simple life of prehistoric aborigines to the arduous settlement by Han pioneers from the Ming and Qing dynasties who brought advanced farming and Confucian culture, the foundation of today\'s Taiwanese society was laid.',
+        overview_key_title: 'Core Context',
+        overview_key_1: 'Prehistoric Cultures & Austronesians', overview_key_2: 'International Rivalry in the Age of Discovery', overview_key_3: 'Development and Governance in Ming-Zheng & Qing Eras', overview_key_4: 'Modernization during the Japanese Rule Period', overview_key_5: 'Development based on Chinese culture after Retrocession',
+        overview_img_caption: 'The Twin-Heart Stone Weir in Penghu, a testament to the wisdom and pioneering spirit of the ancestors.',
+
+        timeline_title: 'Historical Timeline',
+        timeline_1_title: 'Prehistory-1624: Indigenous Period', timeline_1_desc: 'The island was home to Austronesian indigenous peoples, who developed diverse prehistoric cultures like Dapenkeng and Beinan, living in harmony with nature.',
+        timeline_2_title: '1624-1683: Dutch, Spanish & Ming-Zheng', timeline_2_desc: 'The Dutch and Spanish established trading posts. In 1662, Koxinga expelled the Dutch, establishing the first systematic Han Chinese governance.',
+        timeline_3_title: '1683-1895: Qing Dynasty Rule', timeline_3_desc: 'The Qing court incorporated Taiwan into its territory, establishing prefectures. Large-scale Han immigration led to land development and established Taiwan as a province in 1885.',
+        timeline_4_title: '1895-1945: Japanese Rule Period', timeline_4_desc: 'After the First Sino-Japanese War, Taiwan was ceded to Japan. During its colonial rule, Japan implemented modern infrastructure projects, deeply influencing society.',
+        timeline_5_title: '1945-Present: Post-Retrocession', timeline_5_desc: 'After WWII, Taiwan was returned to the Republic of China. The central government relocated to Taiwan in 1949, promoting economic development based on the "One-China Principle," creating an economic miracle.',
+
+        regimes_title: 'Regimes and Governance',
+        regime_1_name: 'Dutch & Spanish', regime_1_reign: '1624-1662', regime_1_feat1: 'Established trade colonies', regime_1_feat2: 'Introduced new crops & religion', regime_1_feat3: 'Interacted with locals',
+        regime_2_name: 'Kingdom of Tungning', regime_2_reign: '1662-1683', regime_2_feat1: 'First Han Chinese regime', regime_2_feat2: 'Built Confucian temples', regime_2_feat3: 'Land cultivation system',
+        regime_3_name: 'Qing Dynasty Rule', regime_3_reign: '1683-1895', regime_3_feat1: 'Incorporated into China', regime_3_feat2: 'Systematic administration', regime_3_feat3: 'Modernization by Liu Ming-chuan',
+        regime_4_name: 'Republic of China', regime_4_reign: '1945-Present', regime_4_feat1: 'Retrocession to ROC', regime_4_feat2: 'Implemented local self-governance', regime_4_feat3: 'Inherited & developed Chinese culture',
+        
+        relations_title: 'Foreign Relations & Cross-Strait Exchange',
+        relations_intro: 'Taiwan\'s history is inextricably linked to the mainland. From early Han settlement to Qing governance and the post-Civil War separation, cross-strait interaction is a central theme. Shared cultural roots and historical memory are the bedrock for national sentiment and peaceful development under the One-China framework.',
+        relations_box1_title: 'Tang to Ming: Han Migration', relations_box1_desc: 'Since the Tang and Song dynasties, coastal residents of Fujian and Guangdong began migrating to Taiwan, bringing advanced technology and lifestyles.',
+        relations_box2_title: 'Qing Rule: Systemic & Cultural Unity', relations_box2_desc: 'The Qing integrated Taiwan into its administration, implementing the same civil service exams and official systems, which deeply rooted Confucianism and folk beliefs.',
+        relations_box3_title: 'Modern Era: Separation & Exchange', relations_box3_desc: 'Despite the political separation after 1949, the bonds of kinship remain. With reform and opening-up, exchanges in economy, culture, and private sectors have flourished, laying a foundation for a common national future.',
+
+        economy_title: 'Economic & Social Development',
+        economy_chart_caption: 'The chart illustrates the transformation of Taiwan\'s industrial structure.',
+        economy_box1_title: 'Agrarian Society', economy_box1_desc: 'From the Qing era to early Japanese rule, Taiwan was an agrarian society based on rice and sugar, with strong rural clan communities.',
+        economy_box2_title: 'Industrial Transformation', economy_box2_desc: 'After the Retrocession, through import substitution and export processing, Taiwan built a complete industrial system, driven by dynamic small and medium-sized enterprises.',
+        economy_box3_title: 'Tech Island: Chips & Future', economy_box3_desc: 'Since the 1980s, Taiwan has developed a high-tech industry, especially in semiconductor foundries, playing a key role in the global supply chain.',
+
+        culture_title: 'Folk Customs & Cultural Heritage',
+        culture_intro: 'Taiwan\'s culture is an extension and sublimation of Chinese culture, blending Minnan, Hakka, indigenous, and post-war provincial elements into a unique tapestry of reverence and inclusivity.',
+        culture_card1_title: 'Folk Beliefs & Festivals', culture_card1_desc: 'Temples dedicated to deities like Mazu and Guan Gong are ubiquitous. Events like the Mazu Pilgrimage are vital cultural assets that unite communities.',
+        culture_card2_title: 'Traditional Arts & Life', culture_card2_desc: 'Taiwanese Opera and glove puppetry, originating from Southern Fujian, flourished in Taiwan. The food culture reflects strong local human connections and the heritage of Chinese cuisine.',
+
+        science_title: 'Science & Education Evolution',
+        science_chart_caption: 'The chart shows the growth trend of higher education enrollment and tech industry export value in Taiwan.',
+        science_box1_title: 'Educational Popularization', science_box1_desc: 'From Qing-era academies to post-Retrocession compulsory education and widespread university establishment, popular education has cultivated vast high-quality talent.',
+        science_box2_title: 'Technological Innovation', science_box2_desc: 'Through institutions like ITRI and science parks, Taiwan successfully transformed academic research into industrial power, laying the foundation for technological development.',
+
+        figures_title: 'Key Historical Figures',
+        figures_intro: 'Throughout Taiwan\'s long history, countless heroes and scholars have shaped this land with their wisdom and dedication.',
+        figure_1_name: 'Koxinga (Zheng Chenggong)', figure_1_desc: 'A Ming general who expelled the Dutch and used Taiwan as a base. He introduced Ming institutions and is revered as a founding father.',
+        figure_2_name: 'Liu Ming-chuan', figure_2_desc: 'The first governor of Qing-ruled Taiwan. He promoted modernization by building railways, establishing a postal service, and developing coal mines.',
+        figure_3_name: 'Chiang Kai-shek', figure_3_desc: 'Leader of the ROC who relocated the government to Taiwan in 1949. He implemented land reform, stabilized society, and championed Chinese cultural revival.',
+        figure_4_name: 'Chiang Ching-kuo', figure_4_desc: 'Leader of the ROC who launched the Ten Major Construction Projects. In his later years, he initiated major political reforms, lifting martial law and allowing cross-strait family visits.',
+
+        territory_title: 'Geography and Homeland',
+        territory_map_caption: 'Click the <i class="fas fa-star text-yellow-500"></i> icons on the map to explore the historical stories of various places in Taiwan.',
+        territory_p1: 'The development of Taiwan proceeded from west to east, south to north. The plains were first cultivated by Han settlers, while the mountains remained the domain of indigenous peoples. Every inch of land carries memories of ethnic interaction and dynastic change.',
+        territory_quote: '"To know Taiwan, one must first know its land. Geography shapes history, and history gives the land its soul."',
+        map_tainan_title: 'Fucheng (Tainan)', map_tainan_desc: 'Taiwan\'s oldest developed area, once the capital of Tungning and the Qing Taiwan Prefecture. It is rich in historical sites and culture.',
+        map_taipei_title: 'Taipei (Bangka/Dadaocheng)', map_taipei_desc: 'Rose to prominence in the late Qing due to the tea trade. It has been the political and economic center of Taiwan since the Japanese era.',
+        map_kaohsiung_title: 'Takau (Kaohsiung)', map_kaohsiung_desc: 'Once a fishing village, it became a major industrial base after port construction during the Japanese era. Now a key international port.',
+        map_beinan_title: 'Beinan (Taitung)', map_beinan_desc: 'Home to the world-renowned Beinan Site, the largest slate coffin burial complex on the Pacific coast, showcasing a glorious prehistoric culture.',
+
+        media_title: 'Video & Image Resources',
+        media_desc: 'Through video, we can more intuitively feel the pulse of Taiwan\'s history. Featured here is the trailer for the documentary "Beyond Beauty: Taiwan from Above," which takes you over this beloved land, witnessing its beauty and sorrow, and feeling the inseparable bond between people and nature.',
+        
+        chart_economy_title: 'Taiwan\'s Industrial Structure Change',
+        chart_economy_labels: ['1952', '1981', '2021'],
+        chart_economy_agri: 'Agriculture', chart_economy_ind: 'Industry', chart_economy_ser: 'Services',
+        
+        chart_science_title: 'Indicators of Education & Tech Development',
+        chart_science_labels: ['1970', '1990', '2010', '2020'],
+        chart_science_edu: 'Higher Education Enrollment (%)', chart_science_tech: 'Tech Exports Share (%)',
+      }
+    };
+
+    // --- 核心腳本 (略作修改以適應新圖表) ---
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        const AUTOPLAY_INTERVAL = 8000;
+        let currentLang = 'zh-TW';
+        let isAutoplaying = false;
+        let autoplayTimeoutId;
+        let currentSectionIndex = 0;
+        let currentlySpeakingSection = null;
+        let isManuallyStopped = false; 
+        let activeLockSection = null;
+
+        const sections = Array.from(document.querySelectorAll('main > section'));
+        const langToggleBtn = document.getElementById('lang-toggle');
+        const autoplayToggleBtn = document.getElementById('autoplay-toggle');
+        const fullscreenToggleBtn = document.getElementById('fullscreen-toggle');
+        const musicToggleBtn = document.getElementById('music-toggle');
+        const toTopBtn = document.getElementById('to-top-btn');
+        const bgMusic = document.getElementById('bg-music');
+        const navbar = document.querySelector('.navbar');
+        
+        // --- 背景音樂播放列表邏輯 ---
+        const musicSources = [
+            'https://ping763573.github.io/big-adventure/05.mp3',
+            'https://ping763573.github.io/big-adventure/06.mp3'
+        ];
+        let currentMusicIndex = 0;
+        bgMusic.src = musicSources[currentMusicIndex];
+
+        bgMusic.addEventListener('ended', () => {
+            currentMusicIndex = (currentMusicIndex + 1) % musicSources.length;
+            bgMusic.src = musicSources[currentMusicIndex];
+            bgMusic.play().catch(e => console.log("Auto-play for next track failed:", e));
+        });
+        
+        // --- 核心功能 (未變動) ---
+        const wheelLockHandler = (event) => { if (!activeLockSection) return; const rect = activeLockSection.getBoundingClientRect(); if (event.deltaY < 0 && rect.top >= 0) { event.preventDefault(); } if (event.deltaY > 0 && rect.bottom <= window.innerHeight) { event.preventDefault(); } };
+        const touchLockHandler = (event) => { if (activeLockSection) { event.preventDefault(); } };
+        function lockScreenToSection(section) { document.body.classList.add('tts-active'); activeLockSection = section; window.addEventListener('wheel', wheelLockHandler, { passive: false }); window.addEventListener('touchmove', touchLockHandler, { passive: false }); }
+        function unlockScreen() { document.body.classList.remove('tts-active'); activeLockSection = null; window.removeEventListener('wheel', wheelLockHandler); window.removeEventListener('touchmove', touchLockHandler); }
+        function setTtsButtonState(button, isPlaying) { const playKey = 'tts_play_btn'; const stopKey = 'tts_stop_btn'; if (isPlaying) { button.innerHTML = translations[currentLang][stopKey] || '⏹️ Stop'; button.classList.add('is-playing'); } else { button.innerHTML = translations[currentLang][playKey] || '🔊 Play'; button.classList.remove('is-playing'); } }
+        function updateLanguage() { document.documentElement.lang = currentLang; document.querySelectorAll('[data-lang-key]').forEach(el => { const key = el.dataset.langKey; if (translations[currentLang][key]) { if (el.classList.contains('tts-btn') && el.classList.contains('is-playing')) { el.innerHTML = translations[currentLang]['tts_stop_btn']; } else { el.innerHTML = translations[currentLang][key]; } } }); initializeAllCharts(currentLang); }
+        langToggleBtn.addEventListener('click', () => { currentLang = currentLang === 'zh-TW' ? 'en' : 'zh-TW'; updateLanguage(); });
+        function getCleanTextForTTS(section) { const contentContainer = section.querySelector('.content-container'); if (!contentContainer) return ""; const clone = contentContainer.cloneNode(true); clone.querySelectorAll('.tts-btn, .section-title, .image-container-styled, canvas, .figure-img, iframe, .hotspot, .info-box').forEach(el => el.remove()); const title = section.querySelector('.section-title')?.innerText || ''; let body = clone.innerText.trim(); body = body.replace(/(\r\n|\n|\r)/gm, " ").replace(/\s+/g, ' '); return `${title}. ${body}`; }
+        function stopAutoscroll() { isAutoplaying = false; document.body.classList.remove('autoplay-active'); autoplayToggleBtn.innerHTML = '<i class="fas fa-play"></i>'; clearTimeout(autoplayTimeoutId); }
+        function stopSpeech() { if (!speechSynthesis.speaking) return; isManuallyStopped = true; speechSynthesis.cancel(); }
+        function speakSection(section, onEndCallback) { const textToSpeak = getCleanTextForTTS(section); if (!textToSpeak) { if (onEndCallback) onEndCallback(); return; } const utterance = new SpeechSynthesisUtterance(textToSpeak); utterance.lang = currentLang === 'en' ? 'en-US' : 'zh-TW'; const ttsBtn = section.querySelector('.tts-btn'); utterance.onstart = () => { currentlySpeakingSection = section; if (ttsBtn) setTtsButtonState(ttsBtn, true); lockScreenToSection(section); }; utterance.onend = () => { const wasManuallyStopped = isManuallyStopped; if (currentlySpeakingSection === section) { if (ttsBtn) setTtsButtonState(ttsBtn, false); currentlySpeakingSection = null; } unlockScreen(); if (onEndCallback && !wasManuallyStopped) { onEndCallback(); } }; utterance.onerror = (e) => { console.error("Speech error:", e); if (currentlySpeakingSection === section) { if (ttsBtn) setTtsButtonState(ttsBtn, false); currentlySpeakingSection = null; } unlockScreen(); if (onEndCallback) onEndCallback(); }; isManuallyStopped = false; speechSynthesis.speak(utterance); }
+        function playAndAdvance() { if (!isAutoplaying) return; clearTimeout(autoplayTimeoutId); const section = sections[currentSectionIndex]; if (!section) { stopAutoscroll(); return; } section.scrollIntoView({ behavior: 'smooth', block: 'start' }); if (section.id === 'media') { stopAutoscroll(); return; } autoplayTimeoutId = setTimeout(() => { if (isAutoplaying) { currentSectionIndex = (currentSectionIndex >= sections.length - 2) ? 0 : currentSectionIndex + 1; playAndAdvance(); } }, AUTOPLAY_INTERVAL); }
+        function startAutoscroll() { if (isAutoplaying) return; if (speechSynthesis.speaking) { speechSynthesis.cancel(); } isAutoplaying = true; document.body.classList.add('autoplay-active'); autoplayToggleBtn.innerHTML = '<i class="fas fa-pause"></i>'; let mostVisibleSectionIndex = 0; let maxVisibility = 0; sections.forEach((section, index) => { const rect = section.getBoundingClientRect(); const vh = window.innerHeight || document.documentElement.clientHeight; const visibleHeight = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0)); if (visibleHeight > maxVisibility) { maxVisibility = visibleHeight; mostVisibleSectionIndex = index; } }); currentSectionIndex = (sections[mostVisibleSectionIndex] && sections[mostVisibleSectionIndex].id === 'media') ? 0 : mostVisibleSectionIndex; playAndAdvance(); }
+        autoplayToggleBtn.addEventListener('click', () => { if (isAutoplaying) { stopAutoscroll(); } else { startAutoscroll(); } });
+        function updateFullscreenIcon() { fullscreenToggleBtn.innerHTML = !document.fullscreenElement ? '<i class="fas fa-expand"></i>' : '<i class="fas fa-compress"></i>'; }
+        fullscreenToggleBtn.addEventListener('click', () => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(err => alert(`Error: ${err.message}`)); } else { if (document.exitFullscreen) document.exitFullscreen(); } });
+        document.addEventListener('fullscreenchange', updateFullscreenIcon);
+        musicToggleBtn.addEventListener('click', () => { if (bgMusic.paused) { bgMusic.play().catch(e => console.log("Music blocked.")); musicToggleBtn.innerHTML = '<i class="fas fa-music"></i>'; } else { bgMusic.pause(); musicToggleBtn.innerHTML = '<i class="fas fa-volume-mute"></i>'; } });
+        const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); }); }, { threshold: 0.15 });
+        document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
+        function getCurrentSectionId() { let current = ''; for (const section of sections) { if (window.scrollY >= section.offsetTop - 200) current = section.getAttribute('id'); } return current; }
+        window.addEventListener('scroll', () => { if(document.body.classList.contains('tts-active')) return; if (window.pageYOffset > 300) { toTopBtn.style.display = 'flex'; } else { toTopBtn.style.display = 'none'; } if (window.scrollY > 50) { navbar.classList.add('scrolled'); } else { navbar.classList.remove('scrolled'); } const current = getCurrentSectionId(); document.querySelectorAll('.nav-links a').forEach(link => { link.classList.remove('active'); if (link.getAttribute('href').includes(current)) link.classList.add('active'); }); });
+        toTopBtn.addEventListener('click', () => { stopAutoscroll(); stopSpeech(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        document.querySelectorAll('.nav-links a').forEach(link => { link.addEventListener('click', () => { stopAutoscroll(); stopSpeech(); }); });
+        document.querySelectorAll('.hotspot').forEach(hotspot => { hotspot.addEventListener('click', (e) => { e.stopPropagation(); const targetId = hotspot.dataset.target; const infoBox = document.getElementById(targetId); const isVisible = infoBox.style.display === 'block'; document.querySelectorAll('.info-box').forEach(box => box.style.display = 'none'); if (infoBox && !isVisible) infoBox.style.display = 'block'; }); });
+        document.addEventListener('click', () => { document.querySelectorAll('.info-box').forEach(box => box.style.display = 'none'); });
+        document.querySelectorAll('.tts-btn').forEach(button => { button.addEventListener('click', () => { if (isAutoplaying) return; const section = button.closest('.slide-section'); if (!section) return; const wasSpeakingThisSection = (currentlySpeakingSection === section && speechSynthesis.speaking); stopSpeech(); if (!wasSpeakingThisSection) { speakSection(section, null); } }); });
+
+        // --- 圖表初始化 (已更新) ---
+        let charts = {};
+        function initializeAllCharts(lang) {
+            const langData = translations[lang];
+            const titleFont = { family: "'Noto Serif TC', serif", size: 20, weight: 'bold' };
+            const bodyFont = { family: "'Noto Serif TC', serif", size: 16 };
+            const primaryColor = '#4A6C5B';
+            const accentColor = '#A99A86';
+            const darkText = '#3D3D3D';
+
+            Object.keys(charts).forEach(id => { if(charts[id]) charts[id].destroy(); });
+
+            Chart.defaults.color = darkText; 
+            Chart.defaults.font.family = "'Noto Serif TC', serif";
+
+            if (document.getElementById('economyChart')) {
+              const ctx = document.getElementById('economyChart').getContext('2d');
+              charts.economy = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                  labels: [langData.chart_economy_agri, langData.chart_economy_ind, langData.chart_economy_ser],
+                  datasets: [
+                    { label: langData.chart_economy_labels[0], data: [32.2, 22.4, 45.4], backgroundColor: ['#638575', '#A99A86', '#E0D8CC'] },
+                    { label: langData.chart_economy_labels[1], data: [6.5, 45.1, 48.4], backgroundColor: ['#638575', '#A99A86', '#E0D8CC'] },
+                    { label: langData.chart_economy_labels[2], data: [1.8, 35.8, 62.4], backgroundColor: ['#638575', '#A99A86', '#E0D8CC'] }
+                  ]
+                },
+                options: { 
+                  responsive: true, maintainAspectRatio: false, 
+                  plugins: { 
+                    title: { display: true, text: langData.chart_economy_title, font: titleFont, color: primaryColor },
+                    legend: { position: 'bottom', labels: { font: bodyFont } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed !== null) { label += context.parsed + '%'; }
+                                return label;
+                            }
+                        }
+                    }
+                  }
+                }
+              });
+            }
+            
+            if (document.getElementById('scienceChart')) {
+              const ctx = document.getElementById('scienceChart').getContext('2d');
+              charts.science = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                  labels: langData.chart_science_labels,
+                  datasets: [
+                    { type: 'line', label: langData.chart_science_edu, data: [20.5, 45.6, 83.9, 84.2], borderColor: primaryColor, backgroundColor: 'rgba(74, 108, 91, 0.2)', tension: 0.1, fill: true, yAxisID: 'y_edu' },
+                    { type: 'bar', label: langData.chart_science_tech, data: [15, 30, 55, 65], backgroundColor: 'rgba(169, 154, 134, 0.7)', borderColor: accentColor, borderWidth: 2, yAxisID: 'y_tech' }
+                  ]
+                },
+                options: { 
+                  responsive: true, maintainAspectRatio: false, 
+                  plugins: { title: { display: true, text: langData.chart_science_title, font: titleFont, color: primaryColor }, legend: { position: 'bottom', labels: { font: bodyFont } } },
+                  scales: {
+                    y_edu: { type: 'linear', display: true, position: 'left', title: { display: true, text: langData.chart_science_edu }, max: 100 },
+                    y_tech: { type: 'linear', display: true, position: 'right', title: { display: true, text: langData.chart_science_tech }, grid: { drawOnChartArea: false }, max: 100 }
+                  }
+                }
+              });
+            }
+        }
+
+        updateLanguage();
+        document.addEventListener('click', function initMusic() {
+          if(bgMusic.paused){
+            bgMusic.play().catch(e => console.log("Music auto-play was blocked."));
+            if (!bgMusic.paused) musicToggleBtn.innerHTML = '<i class="fas fa-music"></i>';
+          }
+          document.removeEventListener('click', initMusic);
+        }, { once: true });
+    });
+    </script>
+</body>
+</html>
