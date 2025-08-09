@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>古往今來 - 歷史長河</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+      /* --- 字體導入 --- */
+      @import url('https://fonts.googleapis.com/css2?family=Long+Cang&family=Ma+Shan+Zheng&family=Noto+Serif+TC:wght@400;700;900&family=ZCOOL+XiaoWei&display=swap');
+      
+      :root {
+        --bg-color: #F8F6F2;
+        --primary-color: #42675A;
+        --accent-color: #893F27;
+        --accent-light: #E0D8CC;
+        --text-color: #3D3D3D;
+        --title-font: 'Ma Shan Zheng', 'Noto Serif TC', serif;
+        --body-font: 'Noto Serif TC', serif;
+        --poem-font: 'Long Cang', cursive;
+        --elegant-font: 'ZCOOL XiaoWei', serif;
+      }
+
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0; padding: 0;
+        background-color: #101010; /* 深色底色，防止背景切換時露白 */
+        font-family: var(--body-font);
+        overflow-x: hidden;
+      }
+      
+      #background-container {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        z-index: -1;
+        overflow: hidden;
+      }
+      
+      /* --- 背景影片樣式 --- */
+      #bg-video {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        min-width: 100%;
+        min-height: 100%;
+        width: auto;
+        height: auto;
+        z-index: 0;
+        transform: translateX(-50%) translateY(-50%);
+        object-fit: cover;
+      }
+
+      .bg-overlay {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: radial-gradient(circle at center, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.85) 100%);
+        z-index: 1;
+      }
+
+      .slide-section {
+        width: 100%; min-height: 100vh;
+        padding: 100px 40px; 
+        position: relative;
+        display: flex; flex-direction: column;
+        justify-content: center; align-items: center;
+        margin: 0 auto;
+      }
+      
+      .navbar {
+        position: fixed; top: 0; left: 0; width: 100%;
+        background: linear-gradient(to bottom, rgba(20, 30, 20, 0.95), rgba(20, 30, 20, 0.85));
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        z-index: 1000; padding: 15px 20px;
+        transition: all 0.4s ease;
+      }
+      .nav-links { 
+        display: flex; 
+        justify-content: center; 
+        flex-wrap: wrap; 
+        gap: 10px 30px; 
+      }
+      .nav-links a {
+        color: var(--accent-light); 
+        font-family: var(--elegant-font);
+        font-size: 21px; 
+        padding: 10px 20px; 
+        border-radius: 30px;
+        transition: all 0.4s ease;
+        position: relative;
+        letter-spacing: 1px;
+        background: transparent;
+        overflow: hidden;
+      }
+      .nav-links a::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 0;
+        height: 2px;
+        background: currentColor;
+        transition: all 0.4s ease;
+        transform: translateX(-50%);
+      }
+
+      /* 動態懸停效果 */
+      .nav-links a:hover { 
+        transform: translateY(-4px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        color: #fff; /* 統一懸停顏色 */
+      }
+      .nav-links a:hover::after {
+        width: 80%;
+      }
+      .nav-links a.active {
+        background: linear-gradient(135deg, var(--accent-color), #6E2D1C);
+        color: var(--bg-color);
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      }
+      .nav-links a.active::after {
+        display: none;
+      }
+
+      .control-panel {
+        position: fixed; 
+        right: 30px;
+        display: flex; 
+        flex-direction: column; 
+        gap: 15px; 
+        z-index: 999;
+        transition: top 0.3s ease-in-out; 
+      }
+      .control-btn {
+        width: 55px; height: 55px;
+        background: linear-gradient(135deg, var(--primary-color), #345448);
+        color: var(--accent-color);
+        border: 2px solid var(--accent-color);
+        border-radius: 50%;
+        display: flex; 
+        justify-content: center; 
+        align-items: center;
+        cursor: pointer; 
+        font-size: 22px;
+        transition: all 0.4s ease;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.25);
+        position: relative;
+        overflow: hidden;
+      }
+      .control-btn::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+        transform: rotate(45deg);
+        transition: all 0.6s ease;
+      }
+      .control-btn:hover {
+        background: linear-gradient(135deg, var(--accent-color), #6E2D1C);
+        color: var(--primary-color);
+        transform: scale(1.15) rotate(12deg);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      }
+      .control-btn:hover::after {
+        top: 50%;
+        left: 50%;
+      }
+      #to-top-btn { display: none; }
+      
+      #title .title-content {
+        position: relative; 
+        z-index: 20;
+        padding: 40px; 
+        max-width: 1400px; 
+        margin: 0 auto;
+        text-align: center;
+      }
+      #title h1 {
+        font-family: var(--title-font);
+        font-size: 7rem;
+        font-weight: 700;
+        margin-bottom: 40px;
+        text-shadow: 4px 4px 12px rgba(0, 0, 0, 0.8);
+        letter-spacing: 10px;
+        line-height: 1.2;
+        color: #EFEAD8; /* 設置固定顏色 */
+        position: relative;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 1.2s forwards 0.5s;
+      }
+      .poem-text {
+        font-family: var(--poem-font);
+        font-size: 2.8rem; 
+        line-height: 2;
+        text-shadow: 2px 2px 8px rgba(0,0,0,0.9);
+        white-space: pre-wrap;
+        max-width: 800px; 
+        margin: 0 auto; 
+        letter-spacing: 2px;
+        color: #E0D8CC; /* 設置固定顏色 */
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 1.2s forwards 1s;
+      }
+      .copyright-notice {
+        position: absolute; 
+        bottom: 20px; 
+        left: 50%;
+        transform: translateX(-50%); 
+        font-size: 14px; 
+        color: var(--accent-light); 
+        opacity: 0.7;
+        font-family: var(--elegant-font); 
+        letter-spacing: 1px;
+      }
+      
+      .scroll-indicator {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: var(--accent-light);
+        opacity: 0.8;
+      }
+      .scroll-indicator span {
+        font-family: var(--elegant-font);
+        font-size: 16px;
+        margin-bottom: 8px;
+        animation: pulse 2s infinite;
+      }
+      .scroll-indicator i {
+        font-size: 24px;
+        animation: bounce 2s infinite;
+      }
+      
+      .loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #101010;
+        z-index: 9999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        transition: opacity 0.8s ease, visibility 0.8s ease;
+      }
+      .loading-spinner {
+        width: 60px;
+        height: 60px;
+        border: 5px solid rgba(255,255,255,0.1);
+        border-top: 5px solid var(--accent-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+      .loading-text {
+        font-family: var(--elegant-font);
+        color: var(--accent-light);
+        font-size: 18px;
+        letter-spacing: 2px;
+      }
+
+      @keyframes fadeInUp {
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+        40% { transform: translateY(-20px); }
+        60% { transform: translateY(-10px); }
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      @media (max-width: 1024px) {
+        .nav-links { gap: 8px 20px; }
+        .nav-links a { padding: 8px 14px; font-size: 18px; }
+        #title h1 { font-size: 5.5rem; }
+        .poem-text { font-size: 2.4rem; }
+      }
+      
+      @media (max-width: 768px) {
+        #title { padding: 150px 25px 60px; }
+        #title h1 { font-size: 4rem; letter-spacing: 5px; }
+        .poem-text { font-size: 2rem; line-height: 1.9; }
+        .control-panel { 
+          top: auto !important; 
+          bottom: 20px; 
+          right: 15px; 
+          flex-direction: row;
+          gap: 10px;
+        }
+        .control-btn {
+          width: 45px;
+          height: 45px;
+          font-size: 18px;
+        }
+        .scroll-indicator {
+          display: none;
+        }
+      }
+      
+      @media (max-width: 480px) {
+        #title h1 { font-size: 3rem; }
+        .poem-text { font-size: 1.7rem; }
+        .nav-links a { padding: 7px 10px; font-size: 15px; }
+      }
+    </style>
+</head>
+<body>
+
+    <!-- 背景音樂播放器 -->
+    <audio id="bg-music"></audio>
+    
+    <!-- 加載畫面 -->
+    <div class="loading-screen">
+      <div class="loading-spinner"></div>
+      <div class="loading-text" data-lang-key="loading">載入中...</div>
+    </div>
+    
+    <!-- 動態背景容器 -->
+    <div id="background-container">
+        <div class="bg-overlay"></div>
+        <!-- 背景影片: autoplay屬性會使其一加載就嘗試播放 -->
+        <video autoplay muted loop playsinline id="bg-video">
+            <source src="https://ping763573.github.io/history/00.mp4" type="video/mp4">
+            您的瀏覽器不支援影片標籤。
+        </video>
+    </div>
+
+    <!-- 導覽列 -->
+    <nav class="navbar">
+      <div class="nav-links">
+        <a href="#title" class="active" data-lang-key="nav_home">首頁</a>
+        <a href="https://ping763573.github.io/history/01.html" target="_blank" data-dynasty="han" data-lang-key="nav_han">大漢帝國</a>
+        <a href="https://ping763573.github.io/history/02.html" target="_blank" data-dynasty="tang" data-lang-key="nav_tang">大唐王朝</a>
+        <a href="https://ping763573.github.io/history/03.html" target="_blank" data-dynasty="song" data-lang-key="nav_song">大宋王朝</a>
+        <a href="https://ping763573.github.io/history/04.html" target="_blank" data-dynasty="ming" data-lang-key="nav_ming">大明盛世</a>
+        <a href="https://ping763573.github.io/history/05.html" target="_blank" data-dynasty="qing" data-lang-key="nav_qing">大清餘暉</a>
+        <a href="https://ping763573.github.io/history/06.html" target="_blank" data-dynasty="taiwan" data-lang-key="nav_taiwan">寶島風華</a>
+      </div>
+    </nav>
+
+    <!-- 控制面板 -->
+    <div class="control-panel">
+      <button id="speech-toggle" class="control-btn" title="語音導讀 / Voice Reader"><i class="fas fa-volume-high"></i></button>
+      <button id="lang-toggle" class="control-btn" title="切換語言 / Language"><i class="fas fa-language"></i></button>
+      <button id="fullscreen-toggle" class="control-btn" title="全螢幕 / Fullscreen"><i class="fas fa-expand"></i></button>
+      <button id="music-toggle" class="control-btn" title="背景音樂 / Music"><i class="fas fa-volume-mute"></i></button>
+      <button id="to-top-btn" class="control-btn" title="回到頂部 / Back to Top"><i class="fas fa-arrow-up"></i></button>
+    </div>
+    
+    <!-- 滾動指示器 -->
+    <div class="scroll-indicator">
+      <span data-lang-key="scroll_hint">向下滑動</span>
+      <i class="fas fa-chevron-down"></i>
+    </div>
+
+    <!-- 主要內容區域 -->
+    <main>
+      <section id="title" class="slide-section">
+        <div class="title-content">
+          <h1 id="title-heading" data-lang-key="title_main">古往今來</h1>
+          <p id="poem-content" class="poem-text" data-lang-key="poem">大江東去，浪淘盡，千古風流人物。
+故壘西邊，人道是，三國周郎赤壁。
+亂石穿空，驚濤拍岸，捲起千堆雪。
+江山如畫，一時多少豪傑。
+
+遙想公瑾當年，小喬初嫁了，雄姿英發。
+羽扇綸巾，談笑間，檣櫓灰飛煙滅。
+故國神遊，多情應笑我，早生華髮。
+人生如夢，一尊還酹江月。</p>
+        </div>
+        <p class="copyright-notice" data-lang-key="copyright">展示照片與配樂其版權屬原創所有；純為分享學習，請勿商用。</p>
+      </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const translations = {
+          'zh-TW': {
+            loading: '載入中...',
+            scroll_hint: '向下滑動',
+            nav_home: '首頁', nav_han: '大漢帝國', nav_tang: '大唐王朝', nav_song: '大宋王朝', nav_ming: '大明盛世', nav_qing: '大清餘暉', nav_taiwan: '寶島風華',
+            title_main: '古往今來',
+            poem: `大江東去，浪淘盡，千古風流人物。
+故壘西邊，人道是，三國周郎赤壁。
+亂石穿空，驚濤拍岸，捲起千堆雪。
+江山如畫，一時多少豪傑。
+
+遙想公瑾當年，小喬初嫁了，雄姿英發。
+羽扇綸巾，談笑間，檣櫓灰飛煙滅。
+故國神遊，多情應笑我，早生華髮。
+人生如夢，一尊還酹江月。`,
+            copyright: '展示照片與配樂其版權屬原創所有；純為分享學習，請勿商用。'
+          },
+          'en': {
+            loading: 'Loading...',
+            scroll_hint: 'Scroll Down',
+            nav_home: 'Home', nav_han: 'Han Empire', nav_tang: 'Tang Dynasty', nav_song: 'Song Dynasty', nav_ming: 'Ming Dynasty', nav_qing: 'Qing Twilight', nav_taiwan: 'Formosa',
+            title_main: 'Of Ages Past',
+            poem: `The great river flows east,
+Washing away, heroes of ages past.
+West of the old fortress, so they say,
+Is the Red Cliff of Zhou Yu of the Three Kingdoms.
+Jagged rocks pierce the sky, monstrous waves crash the shore,
+Rolling up a thousand drifts of snow.
+The landscape, like a painting,
+So many heroes in that one moment.
+
+Thinking back to Gongjin then,
+Little Qiao just married, his heroic figure vibrant.
+Feather fan, silk scarf, between talk and laughter,
+Masts and oars vanished in smoke and ash.
+My spirit wanders that ancient land,
+Laugh at my sentimentality, hair turned gray so soon.
+Life is like a dream,
+Let me pour a cup to the river moon.`,
+            copyright: 'Photos and music copyright belong to original creators. For educational sharing only, not for commercial use.'
+          }
+        };
+
+        let currentLang = 'zh-TW';
+        const langToggleBtn = document.getElementById('lang-toggle');
+        const fullscreenToggleBtn = document.getElementById('fullscreen-toggle');
+        const musicToggleBtn = document.getElementById('music-toggle');
+        const toTopBtn = document.getElementById('to-top-btn');
+        const bgMusic = document.getElementById('bg-music');
+        const speechToggleBtn = document.getElementById('speech-toggle');
+        const titleHeading = document.getElementById('title-heading');
+        const poemContent = document.getElementById('poem-content');
+        const loadingScreen = document.querySelector('.loading-screen');
+        const navbar = document.querySelector('.navbar');
+        const controlPanel = document.querySelector('.control-panel');
+        const bgVideo = document.getElementById('bg-video');
+
+        // 隱藏加載畫面
+        setTimeout(() => {
+          loadingScreen.style.opacity = '0';
+          loadingScreen.style.visibility = 'hidden';
+        }, 1500);
+
+        function adjustControlPanelPosition() {
+            if (navbar && controlPanel) {
+                if (window.innerWidth > 768) {
+                    const navbarHeight = navbar.offsetHeight;
+                    controlPanel.style.top = `${navbarHeight + 50}px`;
+                } else {
+                    controlPanel.style.top = ''; 
+                }
+            }
+        }
+
+        const musicPlaylist = [
+            'https://ping763573.github.io/history/01.mp3',
+            'https://ping763573.github.io/history/02.mp3'
+        ];
+        let currentTrackIndex = 0;
+        let musicHasBeenInitiated = false;
+
+        function playNextTrack() {
+            currentTrackIndex = (currentTrackIndex + 1) % musicPlaylist.length;
+            bgMusic.src = musicPlaylist[currentTrackIndex];
+            bgMusic.play().catch(e => console.error("無法播放下一首曲目:", e));
+        }
+        bgMusic.addEventListener('ended', playNextTrack);
+
+        function updateLanguage() {
+            speechSynthesis.cancel();
+            document.documentElement.lang = currentLang;
+            document.querySelectorAll('[data-lang-key]').forEach(el => {
+                const key = el.dataset.langKey;
+                if (translations[currentLang][key]) {
+                    el.innerHTML = translations[currentLang][key].replace(/\n/g, '<br>');
+                }
+            });
+        }
+        langToggleBtn.addEventListener('click', () => {
+            currentLang = currentLang === 'zh-TW' ? 'en' : 'zh-TW';
+            updateLanguage();
+            adjustControlPanelPosition();
+        });
+
+        function updateFullscreenIcon() {
+            if (!document.fullscreenElement) {
+                fullscreenToggleBtn.innerHTML = '<i class="fas fa-expand"></i>';
+            } else {
+                fullscreenToggleBtn.innerHTML = '<i class="fas fa-compress"></i>';
+            }
+        }
+        fullscreenToggleBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => alert(`無法進入全螢幕模式: ${err.message}`));
+            else if (document.exitFullscreen) document.exitFullscreen();
+        });
+        document.addEventListener('fullscreenchange', updateFullscreenIcon);
+
+        // --- START: 修改後的音樂按鈕邏輯 ---
+        function initiateMusic() {
+            if (musicHasBeenInitiated) return;
+            bgMusic.src = musicPlaylist[currentTrackIndex];
+            // 嘗試播放音樂
+            bgMusic.play().then(() => {
+                // 播放成功
+                musicHasBeenInitiated = true;
+                musicToggleBtn.innerHTML = '<i class="fas fa-music"></i>';
+            }).catch(e => {
+                // 播放失敗 (例如瀏覽器政策)，在此不做任何事，等待使用者再次點擊
+                console.log("音樂播放需要使用者互動。");
+            });
+        }
+
+        musicToggleBtn.addEventListener('click', () => {
+            // 如果音樂從未被初始化過 (首次點擊)
+            if (!musicHasBeenInitiated) {
+                initiateMusic(); // 嘗試初始化並播放音樂
+                return; // 結束此次點擊事件處理
+            }
+            
+            // 如果音樂已被初始化，則執行播放/暫停的切換
+            if (bgMusic.paused) {
+                bgMusic.play().catch(e => console.log("音樂播放失敗。"));
+                musicToggleBtn.innerHTML = '<i class="fas fa-music"></i>';
+            } else {
+                bgMusic.pause();
+                musicToggleBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+            }
+        });
+        
+        // **[已修正]** 移除這段程式碼，它會導致頁面任何地方的第一次點擊都播放音樂。
+        // document.body.addEventListener('click', initiateMusic, { once: true });
+        // --- END: 修改後的音樂按鈕邏輯 ---
+
+        window.addEventListener('scroll', () => {
+            toTopBtn.style.display = (window.pageYOffset > 200) ? 'flex' : 'none';
+        });
+        toTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+        
+        // 監聽所有外部連結的點擊事件
+        document.querySelectorAll('.nav-links a[target="_blank"]').forEach(link => {
+            link.addEventListener('click', () => {
+                if (bgMusic && !bgMusic.paused) {
+                    bgMusic.pause();
+                    musicToggleBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                }
+                speechSynthesis.cancel();
+            });
+        });
+
+        // 當點擊「首頁」連結時，確保背景影片播放 (此為良好防禦性措施)
+        const homeLink = document.querySelector('.nav-links a[href="#title"]');
+        if (homeLink) {
+            homeLink.addEventListener('click', () => {
+                if (bgVideo && bgVideo.paused) {
+                    bgVideo.play().catch(error => {
+                        console.log("嘗試在點擊首頁後播放影片失敗:", error);
+                    });
+                }
+            });
+        }
+
+        function handleSpeech() {
+            if (speechSynthesis.speaking) {
+                speechSynthesis.cancel(); 
+            } else {
+                const titleText = titleHeading.innerText;
+                const poemText = poemContent.innerText;
+                const fullText = `${titleText}. ${poemText}`;
+                const utterance = new SpeechSynthesisUtterance(fullText);
+                utterance.lang = currentLang === 'zh-TW' ? 'zh-CN' : 'en-US';
+                
+                utterance.onstart = () => {
+                    speechToggleBtn.innerHTML = '<i class="fas fa-volume-xmark"></i>';
+                };
+                utterance.onend = () => {
+                    speechToggleBtn.innerHTML = '<i class="fas fa-volume-high"></i>';
+                };
+                
+                speechSynthesis.speak(utterance);
+            }
+        }
+        speechToggleBtn.addEventListener('click', handleSpeech);
+        
+        // 初始化
+        adjustControlPanelPosition();
+        window.addEventListener('resize', adjustControlPanelPosition);
+        updateLanguage();
+    });
+    </script>
+</body>
+</html>
